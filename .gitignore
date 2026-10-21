@@ -1,0 +1,14 @@
+# holds a bearer token
+.mcp.json
+
+# env files
+.env
+.env.*
+!.env.example
+
+# collected data
+/data/
+/docs/
+
+node_modules
+.DS_Store
