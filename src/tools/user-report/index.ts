@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { join } from "node:path";
-import { loadEnv } from "@/config/env";
+import { dataDir, loadEnv } from "@/config/env";
 import { DEFAULT_TIMEZONE } from "@/config/constants";
 import { createWixClient } from "@/clients/wix/createWixClient";
 import { PricingPlanOrdersService } from "@/clients/wix/PricingPlanOrdersService";
@@ -41,7 +41,7 @@ balance for real and demo, and attempts to use the app without a valid subscript
     to: { type: "string", placeholder: "dd/mm/yyyy", description: "last day, inclusive (default today; asked if omitted)" },
     project: { type: "string", placeholder: "slugs|all", description: "Sentry projects, comma separated (asked if omitted)" },
     tz: { type: "string", placeholder: "zone", description: "timezone for the days", default: DEFAULT_TIMEZONE },
-    out: { type: "string", placeholder: "path", description: "CSV path (default data/reports/user-report_<from>_<to>.csv)" },
+    out: { type: "string", placeholder: "path", description: "CSV path (default <DATA_DIR>/reports/user-report_<from>_<to>.csv)" },
   },
   notes: `
 Sentry keeps logs for about 30 days. Orders and trades only include what the app logged: trades
@@ -78,7 +78,7 @@ placed directly in IQ Option, or closing while the app was shut, are missing.`,
     });
     const rows = await report.build({ emails, period, sentryProjectIds: projects.map((p) => String(p.id)) });
 
-    const out = values.out ?? join("data", "reports", `user-report_${period.days[0]!.key}_${period.days.at(-1)!.key}.csv`);
+    const out = values.out ?? join(dataDir(), "reports", `user-report_${period.days[0]!.key}_${period.days.at(-1)!.key}.csv`);
     await writeCsv(out, rows, csvColumns(timeZone));
 
     console.log(`\n${formatUserReport(rows, period)}`);

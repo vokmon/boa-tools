@@ -8,14 +8,34 @@ const EnvSchema = z.object({
   SENTRY_BASE_URL: z.url().default("https://sentry.io"),
 });
 
+const IqOptionEnvSchema = z.object({
+  IQ_OPTION_USER: z.string().min(1),
+  IQ_OPTION_PASSWORD: z.string().min(1),
+});
+
 export type Env = z.infer<typeof EnvSchema>;
+export type IqOptionEnv = z.infer<typeof IqOptionEnvSchema>;
 
 /** Reads and validates env vars. Bun loads `.env` automatically. Throws listing every missing key. */
 export function loadEnv(source: Record<string, string | undefined> = process.env): Env {
+  return parseEnv(EnvSchema, source);
+}
+
+/** IQ Option login only, for tools that talk to the broker and nothing else. */
+export function loadIqOptionEnv(source: Record<string, string | undefined> = process.env): IqOptionEnv {
+  return parseEnv(IqOptionEnvSchema, source);
+}
+
+/** Folder for everything tools write (candles database, reports). `DATA_DIR` in .env, default `data`. */
+export function dataDir(source: Record<string, string | undefined> = process.env): string {
+  return source.DATA_DIR?.trim() || "data";
+}
+
+function parseEnv<S extends z.ZodType>(schema: S, source: Record<string, string | undefined>): z.infer<S> {
   const cleaned = Object.fromEntries(
     Object.entries(source).filter(([, value]) => value !== undefined && value !== ""),
   );
-  const result = EnvSchema.safeParse(cleaned);
+  const result = schema.safeParse(cleaned);
   if (!result.success) {
     const problems = result.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n");
     throw new Error(`Invalid environment, check .env:\n${problems}`);

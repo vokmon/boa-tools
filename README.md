@@ -14,7 +14,8 @@ bun test
 src/
   config/     env validation (env.ts) and fixed business constants (constants.ts)
   lib/        tool-agnostic helpers: cli (commands, help, prompts), retrying fetch, logger, dates, CSV, tables
-  clients/    thin services over the official SDKs (@wix/sdk, @sentry/api); no business logic
+  clients/    thin services over the official SDKs (@wix/sdk, @sentry/api, IQ Option); no business logic
+  storage/    local data files shared by tools (candles SQLite)
   domain/     BOA knowledge shared by tools: app log formats, trades and profit/loss, subscriptions
   tools/      one folder per tool; the only place that combines clients
   tools/shared/  options several tools ask for: date range, Sentry projects
@@ -22,7 +23,8 @@ tests/        bun test, using fake fetch / fake services
 docs/         plans and findings
 ```
 
-Reports are written under `data/`, which git ignores.
+Everything tools write goes under `DATA_DIR` (set in `.env`, default `data/`, which git ignores):
+the candles database and CSV reports.
 
 ## Writing a new tool
 
@@ -84,7 +86,7 @@ amount in another currency is written with it, e.g. `12.50 USD`, so currencies a
 logs, de-duplicated by order ids. This reads every closed-position log in the period (about
 1,300 a day, roughly 10 seconds per day), and only covers trades that closed while the app was
 open.
-The CSV in `data/reports/` has the same rows and order:
+The CSV in `<DATA_DIR>/reports/` has the same rows and order:
 `status, first_name, last_name, iq_option_id, email, phone, days_used, days_subscribed, used_days, plan, subscription_end`.
 
 How it works:
@@ -124,7 +126,7 @@ a@x.com   Somchai Jaidee   IQ 100000001   081-000-0000
   Blocked         2 attempts without a valid subscription, last 18/10/2026
 ```
 
-The CSV in `data/reports/` has one row per email with the same data in columns
+The CSV in `<DATA_DIR>/reports/` has one row per email with the same data in columns
 (`real_orders`, `real_pnl`, `demo_balance`, ...).
 
 Where each part comes from:
@@ -142,3 +144,31 @@ Where each part comes from:
 Orders and closed trades can differ: positions still open at the end of the period are not
 closed yet, positions opened before it can close inside it, and a close is only logged while the
 app is open. Real and demo, and different currencies, are never added together.
+
+## collect-candles
+
+Downloads 1-minute candles for every digital-options asset (OTC and main) into
+`<DATA_DIR>/candles.sqlite` (default `data/candles.sqlite`), one UTC day at a time, for the backtest (`docs/backtest-plan.md`).
+
+```
+bun run collect-candles                                  # every day the broker still has, up to now
+bun run collect-candles --from 01/10/2026 --to 20/10/2026
+bun run collect-candles --from 20/10/2026 --to 20/10/2026 --force   # fetch again
+```
+
+Needs `IQ_OPTION_USER` and `IQ_OPTION_PASSWORD` in `.env` (an account without two-factor login).
+
+- The broker keeps only about **60 days** of 1-minute candles. Run this at least every few weeks
+  (weekly is the plan) or older days are lost.
+- A day that is over and fully inside the broker's history is marked complete and skipped on later
+  runs; today and the oldest edge day are stored as partial and fetched again. A failed asset-day is
+  retried next run.
+- Assets: everything tradable at some hour in the next 7 days, plus every asset seen before.
+- One day for all ~136 assets takes about 9 s and 12 MB.
+
+Tables: `candles` (every field the broker returns), `assets`, `collected_days`. Open the file with
+`sqlite3 data/candles.sqlite` (or your `DATA_DIR`) or any SQLite viewer.
+
+To browse the tables in a browser, run `bun run db:studio` and open https://local.drizzle.studio
+(Drizzle Studio, dev dependency of this project, config in `drizzle.config.ts`). The page is served
+by drizzle.team; the data stays on this machine, read by a local server on port 4983. Ctrl-C to stop.

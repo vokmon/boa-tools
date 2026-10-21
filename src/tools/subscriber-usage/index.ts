@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { join } from "node:path";
-import { loadEnv } from "@/config/env";
+import { dataDir, loadEnv } from "@/config/env";
 import { DEFAULT_TIMEZONE } from "@/config/constants";
 import { createWixClient } from "@/clients/wix/createWixClient";
 import { PricingPlanOrdersService } from "@/clients/wix/PricingPlanOrdersService";
@@ -55,7 +55,7 @@ mention their IQ Option id). Lists who never used it first, then who used it mos
       type: "boolean",
       description: "sum profit/loss of closed trades, real and demo separately (asked if omitted; slower)",
     },
-    out: { type: "string", placeholder: "path", description: "CSV path (default data/reports/subscriber-usage_<from>_<to>_<plan>_<match>.csv)" },
+    out: { type: "string", placeholder: "path", description: "CSV path (default <DATA_DIR>/reports/subscriber-usage_<from>_<to>_<plan>_<match>.csv)" },
   },
   notes: `
 Sentry keeps logs for about 30 days. Only trading events log the IQ Option id, so someone who
@@ -131,7 +131,7 @@ opened the app without trading can show as NEVER_USED.`,
 
     const out =
       values.out ??
-      join("data", "reports", `subscriber-usage_${period.days[0]!.key}_${period.days.at(-1)!.key}_${planFilter}_${match}.csv`);
+      join(dataDir(), "reports", `subscriber-usage_${period.days[0]!.key}_${period.days.at(-1)!.key}_${planFilter}_${match}.csv`);
     await writeCsv(out, rows, csvColumns(period, rows));
 
     console.log(`\n${formatReport(rows, { period, planFilter, match, includePnl })}`);
