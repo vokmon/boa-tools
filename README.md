@@ -187,6 +187,25 @@ TURSO_AUTH_TOKEN                      read & write token for that database (no e
 - Assets: everything tradable at some hour in the next 7 days, plus every asset seen before.
 - One day for all ~136 assets is ~170k rows (~11 MB).
 
+### Daily run on Supabase
+
+`supabase/functions/collect-candles/index.ts` is the same collector as a Supabase Edge Function
+(Deno, self-contained, same tables and rules). Each call does one UTC day (default yesterday) for a
+share of the assets, because Edge Functions stop a request at 2 s of CPU time and a full day for all
+assets needs ~3.4 s:
+
+```
+POST /functions/v1/collect-candles  {"part": 0, "parts": 4}                       # yesterday; call part 0..3
+POST /functions/v1/collect-candles  {"day": "2026-10-21", "part": 0, "parts": 4}  # a given day
+```
+
+Each part takes ~20 s and ~0.6-0.9 s CPU.
+
+Secrets: `IQ_OPTION_USER`, `IQ_OPTION_PASSWORD`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`. The
+response lists `fetched`, `skipped`, `failed` and `cpuMs`; failed assets are retried by the next call
+for that day (or by `bun run collect-candles`). Test locally with
+`deno run --allow-net --allow-env --allow-read --allow-sys --env-file=.env supabase/functions/collect-candles/index.ts`.
+
 Tables: `candles` (every field the broker returns; `at` is nanoseconds, stored as REAL), `assets`,
 `collected_days`. Browse and query them in the Turso dashboard (app.turso.tech, the database's data
 browser / SQL shell).

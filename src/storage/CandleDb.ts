@@ -1,5 +1,6 @@
 import type { Client, InStatement } from "@libsql/client";
 import type { RawCandle, UnderlyingInfo } from "@/clients/iqoption/types";
+import { retry } from "@/lib/retry";
 
 /** complete: the whole day is in the past and inside the broker's history; never fetched again. */
 export type DayStatus = "complete" | "partial";
@@ -106,7 +107,8 @@ export class CandleDb {
       sql: "INSERT OR REPLACE INTO collected_days (active_id, size, day, status, candle_count, collected_at) VALUES (?, ?, ?, ?, ?, ?)",
       args: [activeId, size, input.day, input.status, input.candles.length, input.collectedAt.toISOString()],
     });
-    await this.db.batch(statements, "write");
+    // A batch is one transaction, so retrying after a dropped connection cannot write it twice
+    await retry(() => this.db.batch(statements, "write"), { label: `save ${activeId} ${input.day}` });
   }
 
   /** Candles of one asset in [fromTs, toTs), oldest first. */
