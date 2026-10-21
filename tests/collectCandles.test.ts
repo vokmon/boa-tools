@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { createClient } from "@libsql/client";
 import { CandlesService } from "@/clients/iqoption/CandlesService";
 import type { RawCandle } from "@/clients/iqoption/types";
-import { CandleStore } from "@/storage/CandleStore";
+import { CandleDb } from "@/storage/CandleDb";
 import { CandleCollector, dayStatus, firstFullDay } from "@/tools/collect-candles/CandleCollector";
+import { dataDir } from "@/config/env";
 
 const NOW = new Date("2026-10-21T08:00:00Z");
 const dayStart = (day: string) => Date.parse(`${day}T00:00:00Z`) / 1000;
@@ -25,6 +27,18 @@ function fakeCandles() {
     },
   };
 }
+
+/** A fresh in-memory libSQL database, the same engine Turso runs. */
+async function memoryDb(): Promise<CandleDb> {
+  const db = new CandleDb(createClient({ url: ":memory:" }));
+  await db.init();
+  return db;
+}
+
+const assets = [
+  { activeId: 1, name: "EURUSD", isOtc: false, precision: 6 },
+  { activeId: 76, name: "EURUSD-OTC", isOtc: true, precision: 6 },
+];
 
 describe("dayStatus", () => {
   test("a finished day inside the history is complete", () => {
@@ -62,20 +76,44 @@ describe("CandlesService.fetchDay", () => {
   });
 });
 
-describe("CandleCollector", () => {
-  const assets = [
-    { activeId: 1, name: "EURUSD", isOtc: false, precision: 6 },
-    { activeId: 76, name: "EURUSD-OTC", isOtc: true, precision: 6 },
-  ];
+describe("CandleDb", () => {
+  test("keeps every field, including nanosecond at", async () => {
+    const db = await memoryDb();
+    const c = candle(dayStart("2026-10-20"));
+    await db.saveDay({ activeId: 76, size: 60, day: "2026-10-20", status: "complete", candles: [c], collectedAt: NOW });
+    expect(await db.candles(76, 60, dayStart("2026-10-20"), dayStart("2026-10-21"))).toEqual([c]);
+  });
 
+  test("keeps stored candles unless replace is set", async () => {
+    const db = await memoryDb();
+    const c = candle(dayStart("2026-10-20"));
+    const save = (close: number, replace: boolean) =>
+      db.saveDay({ activeId: 1, size: 60, day: "2026-10-20", status: "complete", candles: [{ ...c, close }], collectedAt: NOW, replace });
+    await save(2, false);
+    await save(3, false);
+    expect((await db.candles(1, 60, c.from, c.from + 60))[0]!.close).toBe(2);
+    await save(3, true);
+    expect((await db.candles(1, 60, c.from, c.from + 60))[0]!.close).toBe(3);
+  });
+
+  test("assets keep first_seen and refresh the rest", async () => {
+    const db = await memoryDb();
+    await db.upsertAssets(assets, new Date("2026-10-01T00:00:00Z"));
+    await db.upsertAssets([{ ...assets[0]!, name: "EURUSD2" }], NOW);
+    const [eur] = await db.listAssets();
+    expect(eur).toMatchObject({ name: "EURUSD2", firstSeen: "2026-10-01T00:00:00.000Z", lastSeen: NOW.toISOString() });
+  });
+});
+
+describe("CandleCollector", () => {
   test("stores candles and skips complete days on the next run", async () => {
-    const store = new CandleStore(":memory:");
+    const db = await memoryDb();
     const api = fakeCandles();
-    const collector = new CandleCollector(store, new CandlesService(api));
+    const collector = new CandleCollector(db, new CandlesService(api));
 
     const first = await collector.collect({ assets, days: ["2026-10-19", "2026-10-20"], size: 60, force: false, now: NOW });
     expect(first).toMatchObject({ fetched: 4, skipped: 0, candles: 4 * 1440, partial: 0, failed: [] });
-    expect(store.candles(76, 60, dayStart("2026-10-20"), dayStart("2026-10-21"))).toHaveLength(1440);
+    expect(await db.candles(76, 60, dayStart("2026-10-20"), dayStart("2026-10-21"))).toHaveLength(1440);
 
     const calls = api.calls.length;
     const second = await collector.collect({ assets, days: ["2026-10-19", "2026-10-20"], size: 60, force: false, now: NOW });
@@ -84,38 +122,32 @@ describe("CandleCollector", () => {
 
     const forced = await collector.collect({ assets, days: ["2026-10-20"], size: 60, force: true, now: NOW });
     expect(forced).toMatchObject({ fetched: 2, skipped: 0 });
-    expect(store.candles(1, 60, dayStart("2026-10-20"), dayStart("2026-10-21"))).toHaveLength(1440);
   });
 
   test("partial days are fetched again, days beyond the history are not fetched", async () => {
-    const store = new CandleStore(":memory:");
-    const api = fakeCandles();
-    const collector = new CandleCollector(store, new CandlesService(api));
-
+    const collector = new CandleCollector(await memoryDb(), new CandlesService(fakeCandles(), () => NOW.getTime() / 1000));
     const run = () => collector.collect({ assets, days: ["2026-08-21", "2026-10-21"], size: 60, force: false, now: NOW });
-    const first = await run();
-    expect(first).toMatchObject({ fetched: 2, partial: 2, beyondHistory: ["2026-08-21"] });
+    expect(await run()).toMatchObject({ fetched: 2, partial: 2, beyondHistory: ["2026-08-21"] });
     expect((await run()).fetched).toBe(2);
   });
 
   test("a failing asset-day is reported and not marked collected", async () => {
-    const store = new CandleStore(":memory:");
+    const db = await memoryDb();
     const fetcher = {
       async fetchDay(activeId: number) {
         if (activeId === 76) throw new Error("boom");
         return [candle(dayStart("2026-10-20"))];
       },
     };
-    const summary = await new CandleCollector(store, fetcher).collect({ assets, days: ["2026-10-20"], size: 60, force: false, now: NOW });
+    const summary = await new CandleCollector(db, fetcher).collect({ assets, days: ["2026-10-20"], size: 60, force: false, now: NOW });
     expect(summary.fetched).toBe(1);
     expect(summary.failed).toHaveLength(1);
-    expect(store.completeDays(60)).toEqual(new Set(["1|2026-10-20"]));
+    expect(await db.completeDays(60)).toEqual(new Set(["1|2026-10-20"]));
   });
 });
 
 describe("dataDir", () => {
-  test("defaults to data and follows DATA_DIR", async () => {
-    const { dataDir } = await import("@/config/env");
+  test("defaults to data and follows DATA_DIR", () => {
     expect(dataDir({})).toBe("data");
     expect(dataDir({ DATA_DIR: "  " })).toBe("data");
     expect(dataDir({ DATA_DIR: "/Volumes/ext/boa" })).toBe("/Volumes/ext/boa");

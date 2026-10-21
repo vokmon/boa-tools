@@ -8,14 +8,26 @@ cp .env.example .env   # fill in the keys
 bun test
 ```
 
+## Tools and services
+
+| What | Used for |
+|---|---|
+| [Bun](https://bun.sh) + TypeScript | runtime and test runner (`bun test`) |
+| [zod](https://zod.dev) | `.env` validation |
+| [@inquirer/prompts](https://github.com/SBoudrias/Inquirer.js) | interactive prompts and pickers |
+| [@wix/sdk](https://dev.wix.com/docs/sdk) (pricing-plans, crm) | subscribers and contacts |
+| [@sentry/api](https://docs.sentry.io/api/) | app usage and trade logs |
+| [@quadcode-tech/client-sdk-js](https://www.npmjs.com/package/@quadcode-tech/client-sdk-js) 1.3.26 | IQ Option login, assets and candles (same version as iq-robot) |
+| [Turso](https://turso.tech) (hosted SQLite) + [@libsql/client](https://www.npmjs.com/package/@libsql/client) | candles database (free plan, no card) |
+
 ## Layout
 
 ```
 src/
   config/     env validation (env.ts) and fixed business constants (constants.ts)
   lib/        tool-agnostic helpers: cli (commands, help, prompts), retrying fetch, logger, dates, CSV, tables
-  clients/    thin services over the official SDKs (@wix/sdk, @sentry/api, IQ Option); no business logic
-  storage/    local data files shared by tools (candles SQLite)
+  clients/    thin services over the official SDKs (@wix/sdk, @sentry/api, IQ Option, Turso); no business logic
+  storage/    candle data shared by tools (CandleDb: tables and queries in Turso)
   domain/     BOA knowledge shared by tools: app log formats, trades and profit/loss, subscriptions
   tools/      one folder per tool; the only place that combines clients
   tools/shared/  options several tools ask for: date range, Sentry projects
@@ -23,8 +35,8 @@ tests/        bun test, using fake fetch / fake services
 docs/         plans and findings
 ```
 
-Everything tools write goes under `DATA_DIR` (set in `.env`, default `data/`, which git ignores):
-the candles database and CSV reports.
+Everything tools write locally goes under `DATA_DIR` (optional in `.env`, default `data/`, which git
+ignores): CSV reports.
 
 ## Writing a new tool
 
@@ -147,28 +159,38 @@ app is open. Real and demo, and different currencies, are never added together.
 
 ## collect-candles
 
-Downloads 1-minute candles for every digital-options asset (OTC and main) into
-`<DATA_DIR>/candles.sqlite` (default `data/candles.sqlite`), one UTC day at a time, for the backtest (`docs/backtest-plan.md`).
+Downloads 1-minute candles for every IQ Option digital-options asset (OTC and main) into the Turso
+database, one UTC day at a time, for the backtest (`docs/backtest-plan.md`). Nothing is kept on this
+machine.
 
 ```
 bun run collect-candles                                  # every day the broker still has, up to now
 bun run collect-candles --from 01/10/2026 --to 20/10/2026
-bun run collect-candles --from 20/10/2026 --to 20/10/2026 --force   # fetch again
+bun run collect-candles --from 20/10/2026 --to 20/10/2026 --force   # fetch again, overwrite
 ```
 
-Needs `IQ_OPTION_USER` and `IQ_OPTION_PASSWORD` in `.env` (an account without two-factor login).
+Needs in `.env`:
+
+```
+IQ_OPTION_USER / IQ_OPTION_PASSWORD   IQ Option login (an account without two-factor login)
+TURSO_DATABASE_URL                    libsql://<database>-<user>.<region>.turso.io
+TURSO_AUTH_TOKEN                      read & write token for that database (no expiry, or the weekly run breaks)
+```
 
 - The broker keeps only about **60 days** of 1-minute candles. Run this at least every few weeks
   (weekly is the plan) or older days are lost.
-- A day that is over and fully inside the broker's history is marked complete and skipped on later
-  runs; today and the oldest edge day are stored as partial and fetched again. A failed asset-day is
-  retried next run.
+- Days are UTC (07:00 to 06:59 Bangkok time). An asset-day that is over and fully inside the
+  broker's history is marked complete and skipped on later runs; today and the oldest edge day are
+  stored as partial and fetched again. A failed asset-day is retried next run.
+- Candles already stored are kept when a partial day is fetched again (the broker only returns
+  closed candles), so only new rows count as Turso writes. `--force` overwrites.
 - Assets: everything tradable at some hour in the next 7 days, plus every asset seen before.
-- One day for all ~136 assets takes about 9 s and 12 MB.
+- One day for all ~136 assets is ~170k rows (~11 MB).
 
-Tables: `candles` (every field the broker returns), `assets`, `collected_days`. Open the file with
-`sqlite3 data/candles.sqlite` (or your `DATA_DIR`) or any SQLite viewer.
+Tables: `candles` (every field the broker returns; `at` is nanoseconds, stored as REAL), `assets`,
+`collected_days`. Browse and query them in the Turso dashboard (app.turso.tech, the database's data
+browser / SQL shell).
 
-To browse the tables in a browser, run `bun run db:studio` and open https://local.drizzle.studio
-(Drizzle Studio, dev dependency of this project, config in `drizzle.config.ts`). The page is served
-by drizzle.team; the data stays on this machine, read by a local server on port 4983. Ctrl-C to stop.
+Turso free plan (Oct 2026): 5 GB storage (~15 months of candles), 10M rows written and 500M rows read
+per month. Re-collecting all ~60 days is ~8.75M writes, most of a month. Reads count rows scanned, so
+heavy analysis (the backtest) should run on a local copy rather than query Turso repeatedly.

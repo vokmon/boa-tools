@@ -13,8 +13,14 @@ const IqOptionEnvSchema = z.object({
   IQ_OPTION_PASSWORD: z.string().min(1),
 });
 
+const TursoEnvSchema = z.object({
+  TURSO_DATABASE_URL: z.string().startsWith("libsql://", "expected libsql://<database>.turso.io"),
+  TURSO_AUTH_TOKEN: z.string().min(1),
+});
+
 export type Env = z.infer<typeof EnvSchema>;
 export type IqOptionEnv = z.infer<typeof IqOptionEnvSchema>;
+export type TursoEnv = z.infer<typeof TursoEnvSchema>;
 
 /** Reads and validates env vars. Bun loads `.env` automatically. Throws listing every missing key. */
 export function loadEnv(source: Record<string, string | undefined> = process.env): Env {
@@ -26,9 +32,14 @@ export function loadIqOptionEnv(source: Record<string, string | undefined> = pro
   return parseEnv(IqOptionEnvSchema, source);
 }
 
-/** Folder for everything tools write (candles database, reports). `DATA_DIR` in .env, default `data`. */
+/** Folder for files tools write (CSV reports). `DATA_DIR` in .env, default `data`. */
 export function dataDir(source: Record<string, string | undefined> = process.env): string {
   return source.DATA_DIR?.trim() || "data";
+}
+
+/** Turso database that holds the candles. */
+export function loadTursoEnv(source: Record<string, string | undefined> = process.env): TursoEnv {
+  return parseEnv(TursoEnvSchema, source);
 }
 
 function parseEnv<S extends z.ZodType>(schema: S, source: Record<string, string | undefined>): z.infer<S> {

@@ -1,6 +1,5 @@
 import type { RawCandle, UnderlyingInfo } from "@/clients/iqoption/types";
-import type { CandleStore, DayStatus } from "@/storage/CandleStore";
-import { dayKey } from "@/storage/CandleStore";
+import { dayKey, type CandleDb, type DayStatus } from "@/storage/CandleDb";
 import { mapWithConcurrency } from "@/lib/concurrency";
 import { logger } from "@/lib/logger";
 
@@ -61,13 +60,13 @@ export function firstFullDay(now: Date, size: number): string {
 
 export class CandleCollector {
   constructor(
-    private readonly store: Pick<CandleStore, "completeDays" | "saveDay">,
+    private readonly db: Pick<CandleDb, "completeDays" | "saveDay">,
     private readonly fetcher: DayFetcher,
   ) {}
 
   async collect(input: CollectInput): Promise<CollectSummary> {
     const { assets, size, now } = input;
-    const done = input.force ? new Set<string>() : this.store.completeDays(size);
+    const done = input.force ? new Set<string>() : await this.db.completeDays(size);
     const summary: CollectSummary = { fetched: 0, skipped: 0, failed: [], candles: 0, partial: 0, beyondHistory: [] };
 
     for (const day of input.days) {
@@ -89,11 +88,12 @@ export class CandleCollector {
       await mapWithConcurrency(todo, CONCURRENCY, async (asset) => {
         try {
           const candles = await this.fetcher.fetchDay(asset.activeId, size, dayStart);
-          this.store.saveDay({ activeId: asset.activeId, size, day, status, candles, collectedAt: new Date() });
+          await this.db.saveDay({ activeId: asset.activeId, size, day, status, candles, collectedAt: new Date(), replace: input.force });
           summary.fetched++;
           dayCandles += candles.length;
           if (status === "partial") summary.partial++;
         } catch (error) {
+          // Not marked collected, so the next run retries it
           summary.failed.push(`${day} ${asset.name} (${asset.activeId}): ${(error as Error)?.message ?? error}`);
           logger.warn(`${day} ${asset.name}: ${(error as Error)?.message ?? error}`);
         }
