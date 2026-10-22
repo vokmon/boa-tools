@@ -47,6 +47,16 @@ export interface SignalSettings {
   sizeLookback: number;
   /** ...each body at least this share of that average. */
   minCandleSizeRatio: number;
+
+  // Volume: not part of iq-robot's signal; all off by default, which leaves the bot's signal as is.
+  /** The signal candle's volume must be at least this times the average of the candles before it (0 = off). */
+  volumeMinRatio: number;
+  /** The signal candle's volume must be at most this times that average (0 = off). */
+  volumeMaxRatio: number;
+  /** Candles before the signal candle the average volume is taken over. */
+  volumeLookback: number;
+  /** Assets without volume (OTC reports 0): "trade" ignores the volume rule there, "skip" does not trade them. */
+  withoutVolume: "trade" | "skip";
 }
 
 export const DEFAULT_SIGNAL_SETTINGS: Readonly<SignalSettings> = Object.freeze({
@@ -71,6 +81,10 @@ export const DEFAULT_SIGNAL_SETTINGS: Readonly<SignalSettings> = Object.freeze({
   // iq-robot: max(minCandleSizeLookbackPeriod 25, floor(windowSize 100 * lookbackPercentage 0.35))
   sizeLookback: 35,
   minCandleSizeRatio: 0.75,
+  volumeMinRatio: 0,
+  volumeMaxRatio: 0,
+  volumeLookback: 20,
+  withoutVolume: "trade",
 });
 
 export function withDefaults(settings: Partial<SignalSettings> = {}): SignalSettings {

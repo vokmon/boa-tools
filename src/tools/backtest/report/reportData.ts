@@ -1,7 +1,7 @@
 import { CHECK_DAYS } from "@/domain/backtest/summary";
 import type { BacktestResult, LevelResult, SettingResult } from "../runBacktest";
 import { defaultValues } from "../settings/settingsFile";
-import { NUMBER_FIELDS } from "../settings/fields";
+import { CHOICE_FIELDS, NUMBER_FIELDS } from "../settings/fields";
 import { roundOutcomes } from "@/domain/backtest/martingale";
 import { breakEvenPct, changesFromBot, fullLossEvery, ordered } from "../output/format";
 import { RESULT_GUIDE, SETTING_GROUPS, SETTING_GUIDE } from "./guide";
@@ -113,7 +113,7 @@ function setting(r: SettingResult, defaults: Record<string, number | string>): R
     changes,
     groups: SETTING_GROUPS.map((g) => ({
       name: g.name,
-      items: [...NUMBER_FIELDS.map((f) => f.path), "martingale.type"]
+      items: [...NUMBER_FIELDS.map((f) => f.path), ...Object.keys(CHOICE_FIELDS)]
         .filter((path) => path.startsWith(`${g.key}.`))
         .map((path) => ({ name: SETTING_GUIDE[path]?.name ?? path, value: String(r.setting.values[path]), bot: String(defaults[path]), changed: r.setting.values[path] !== defaults[path] })),
     })).concat(r.setting.values.hours ? [{ name: "Hours", items: [{ name: "Start rounds only", value: (r.setting.values.hours as string[]).join(", "), bot: "all day", changed: true }] }] : []),

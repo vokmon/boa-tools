@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS candles (
   close     REAL NOT NULL,
   min       REAL NOT NULL,
   max       REAL NOT NULL,
+  volume    REAL NOT NULL DEFAULT 0,
   PRIMARY KEY (active_id, size, from_ts)
 ) WITHOUT ROWID;
 
@@ -37,7 +38,7 @@ CREATE TABLE IF NOT EXISTS assets (
 /**
  * Local copy of the complete days in Turso, for the backtest: reading it costs nothing, while every
  * full pass over Turso would use ~11M of its 500M monthly row reads. Safe to delete; the next sync
- * rebuilds it. Holds only what the backtest reads (from, open, close, min, max).
+ * rebuilds it. Holds only what the backtest reads (from, open, close, min, max, volume).
  */
 export class LocalCandleCache {
   private readonly db: Database;
@@ -47,6 +48,20 @@ export class LocalCandleCache {
     this.db = new Database(path, { create: true, strict: true });
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;");
     this.db.exec(SCHEMA);
+    this.addVolumeColumn();
+  }
+
+  /**
+   * Copies made before volume was kept have no volume column: add it and forget which days are
+   * held, so the next sync copies everything again with volume (once, ~1 minute).
+   */
+  private addVolumeColumn(): void {
+    const columns = this.db.query<{ name: string }, []>("PRAGMA table_info(candles)").all().map((c) => c.name);
+    if (columns.includes("volume")) return;
+    this.db.transaction(() => {
+      this.db.exec("ALTER TABLE candles ADD COLUMN volume REAL NOT NULL DEFAULT 0");
+      this.db.exec("DELETE FROM days");
+    })();
   }
 
   replaceAssets(assets: readonly StoredAsset[]): void {
@@ -72,7 +87,7 @@ export class LocalCandleCache {
   /** Replaces the given days of one asset with these candles, atomically. */
   replaceDays(activeId: number, size: number, days: readonly DayVersion[], candles: readonly Candle[]): void {
     const insertCandle = this.db.prepare(
-      "INSERT OR REPLACE INTO candles (active_id, size, from_ts, open, close, min, max) VALUES ($activeId, $size, $from, $open, $close, $min, $max)",
+      "INSERT OR REPLACE INTO candles (active_id, size, from_ts, open, close, min, max, volume) VALUES ($activeId, $size, $from, $open, $close, $min, $max, $volume)",
     );
     const insertDay = this.db.prepare(
       "INSERT OR REPLACE INTO days (active_id, size, day, candle_count, collected_at) VALUES ($activeId, $size, $day, $candleCount, $collectedAt)",
@@ -83,7 +98,7 @@ export class LocalCandleCache {
         const start = Date.parse(`${d.day}T00:00:00Z`) / 1000;
         deleteDay.run(activeId, size, start, start + DAY_S);
       }
-      for (const c of candles) insertCandle.run({ activeId, size, from: c.from, open: c.open, close: c.close, min: c.min, max: c.max });
+      for (const c of candles) insertCandle.run({ activeId, size, from: c.from, open: c.open, close: c.close, min: c.min, max: c.max, volume: c.volume ?? 0 });
       for (const d of days) insertDay.run({ activeId, size, day: d.day, candleCount: d.candleCount, collectedAt: d.collectedAt });
     })();
   }
@@ -91,11 +106,11 @@ export class LocalCandleCache {
   /** Every candle of one asset, oldest first. */
   candles(activeId: number, size: number): Candle[] {
     return this.db
-      .query<{ from_ts: number; open: number; close: number; min: number; max: number }, [number, number]>(
-        "SELECT from_ts, open, close, min, max FROM candles WHERE active_id = ? AND size = ? ORDER BY from_ts",
+      .query<{ from_ts: number; open: number; close: number; min: number; max: number; volume: number }, [number, number]>(
+        "SELECT from_ts, open, close, min, max, volume FROM candles WHERE active_id = ? AND size = ? ORDER BY from_ts",
       )
       .all(activeId, size)
-      .map((r) => ({ from: r.from_ts, open: r.open, close: r.close, min: r.min, max: r.max }));
+      .map((r) => ({ from: r.from_ts, open: r.open, close: r.close, min: r.min, max: r.max, volume: r.volume }));
   }
 
   /** Days held here, oldest first. */

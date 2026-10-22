@@ -4,6 +4,42 @@ Replays the bot on every collected 1-minute candle and shows, for each setting, 
 at which martingale level, the profit per day, the risk, and the best hours to trade (Bangkok time).
 Use it to compare settings files: your own ideas, or ones an AI suggests from the brief.
 
+## What we are looking for
+
+**The signal is a reversal signal.** It fires when the price has gone too far one way and should turn
+back on the next candle: stretched to the top or bottom of its recent range (stochastic), at a recent
+high or low (support/resistance zone), breaking out of the Donchian channel and the Bollinger band,
+after several solid candles of the same colour. A PUT bets the next candle goes down after a run up;
+a CALL the opposite.
+
+**A good setting:**
+
+| Target | Why |
+|---|---|
+| **800+ rounds a day**, all assets together | the bot should trade steadily, about as much as it does today (~830) |
+| **First order wins more than 54.1%** (at 85% payout) | below that every order loses money on average, whatever the martingale |
+| **Max martingale 4 or less** | more levels risk too much on one round |
+| **Still profitable on the newest 2 weeks** | the newest 14 days are for checking a setting, not choosing it, so a lucky fit shows up |
+| **A compromise, not a perfect record** | losing rounds are fine when the day still ends in profit |
+
+The periods of Donchian (20), Bollinger (14) and support/resistance (25) stay as the bot uses them;
+we tune the zone, stochastic level, candle rules and volume. Candles are always 1 minute.
+
+**Findings so far (24/08-21/10/2026):**
+- The bot's current settings: the first order wins **50.6%**, the same as a random candle; the
+  martingale turns that into 97% won rounds but loses about 4,400 THB a day (10 THB orders).
+- Of about 2,600 combinations of zone, stochastic level, candle rules and volume, the ones with
+  800+ rounds a day all stay at **50.4-51%**: they change how often the bot trades, not how often
+  it is right. OTC assets (most of the rounds) behave like a coin flip.
+- A **volume spike** on the signal candle (2-3x the recent average) is the first real edge: 55-60%
+  on main assets, holding up on the newest 2 weeks, but only 9-50 rounds a day (OTC has no volume).
+- With a below-break-even first order, every martingale level loses more; no martingale loses least.
+
+**How we test from here:** reason from the reversal idea instead of trying random numbers. First
+measure, for every candle, how often the next candle really reverses after each piece of evidence on
+its own (same-colour run, stochastic level, zone, band, candle size, volume), for OTC and main assets
+separately; then combine only the evidence that works, and check it gives 800+ rounds a day.
+
 ## Running
 
 ```
@@ -88,6 +124,17 @@ The signal candle must be a solid move: a big body, a small wick against the mov
 | `candle.minSizeVsAverage` Minimum size vs recent average | The latest candles' bodies must each be at least this many times the average body of the candles before them. | Higher: needs bigger candles than usual, fewer signals. | 0.75 | 0-5 |
 | `candle.sizeCandles` Candles checked for size | How many latest candles the size rule applies to. | Higher: stricter, fewer signals. | 3 | 1-10 (whole) |
 | `candle.sizeLookback` Candles in the average size | How many earlier candles the average body is taken over. | Higher: a longer-term average. | 35 | 5-90 (whole) |
+
+### Volume
+
+The signal candle's volume (how much was traded in that minute) against the average of the candles just before it. Not part of the bot's signal today; off unless set. IQ Option reports no volume for OTC assets.
+
+| Setting | What it is | Raising it | Bot | Allowed |
+|---|---|---|---|---|
+| `volume.minVsAverage` Busy signal candle (x average) | The signal candle's volume must be at least this many times the average volume before it, e.g. 2 means double. 0 turns it off. | Higher: only candles with a bigger burst of trading, fewer signals. | 0 | 0-20 |
+| `volume.maxVsAverage` Quiet signal candle (x average) | The signal candle's volume must be at most this many times the average volume before it, e.g. 0.8. 0 turns it off. | Higher: allows busier candles, more signals. | 0 | 0-20 |
+| `volume.lookback` Candles in the average volume | How many candles before the signal candle the average volume is taken over. | Higher: a longer-term average. | 20 | 1-99 (whole) |
+| `volume.withoutVolume` Assets without volume | What to do where there is no volume to check (OTC assets): trade ignores the volume rule there, skip does not trade those assets, so only assets with volume trade. | - | trade | trade / skip |
 
 ### Martingale
 

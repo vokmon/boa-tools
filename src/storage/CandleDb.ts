@@ -131,10 +131,10 @@ export class CandleDb {
   /** Only the fields the backtest uses, for one asset in [fromTs, toTs); a primary-key range scan. */
   async ohlc(activeId: number, size: number, fromTs: number, toTs: number): Promise<Candle[]> {
     const { rows } = await this.db.execute({
-      sql: "SELECT from_ts, open, close, min, max FROM candles WHERE active_id = ? AND size = ? AND from_ts >= ? AND from_ts < ? ORDER BY from_ts",
+      sql: "SELECT from_ts, open, close, min, max, volume FROM candles WHERE active_id = ? AND size = ? AND from_ts >= ? AND from_ts < ? ORDER BY from_ts",
       args: [activeId, size, fromTs, toTs],
     });
-    return rows.map((r) => ({ from: Number(r.from_ts), open: Number(r.open), close: Number(r.close), min: Number(r.min), max: Number(r.max) }));
+    return rows.map((r) => ({ from: Number(r.from_ts), open: Number(r.open), close: Number(r.close), min: Number(r.min), max: Number(r.max), volume: Number(r.volume) }));
   }
 
   /** Candles of one asset in [fromTs, toTs), oldest first. */

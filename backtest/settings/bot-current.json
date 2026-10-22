@@ -13,6 +13,7 @@
     "sizeCandles": 3,
     "sizeLookback": 35
   },
+  "volume": { "minVsAverage": 0, "maxVsAverage": 0, "lookback": 20, "withoutVolume": "trade" },
   "martingale": { "type": "standard", "multiplier": 2.5, "levels": 4 },
   "order": { "amount": 10, "payout": 85 }
 }

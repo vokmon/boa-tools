@@ -2,7 +2,7 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { DEFAULT_SIGNAL_SETTINGS, type SignalSettings } from "@/domain/signal";
 import { DEFAULT_MARTINGALE, DEFAULT_ORDER, type MartingaleSettings, type MartingaleType, type OrderSettings } from "@/domain/backtest/martingale";
-import { FIELD_BY_PATH, NUMBER_FIELDS, type NumberField } from "./fields";
+import { CHOICE_FIELDS, FIELD_BY_PATH, NUMBER_FIELDS, type NumberField } from "./fields";
 
 /** One fully resolved setting to backtest: a file, or one combination of the lists in a file. */
 export interface RunSetting {
@@ -21,7 +21,7 @@ export interface RunSetting {
 
 export class SettingsError extends Error {}
 
-const GROUPS = new Set(NUMBER_FIELDS.map((f) => f.path.split(".")[0]!));
+const GROUPS = new Set([...NUMBER_FIELDS.map((f) => f.path), ...Object.keys(CHOICE_FIELDS)].map((p) => p.split(".")[0]!));
 const TOP_LEVEL = new Set([...GROUPS, "note", "hours"]);
 
 /** The values a file uses when it leaves something out: the bot's current settings. */
@@ -44,6 +44,10 @@ export function defaultValues(): Record<string, number | string> {
     "candle.minSizeVsAverage": s.minCandleSizeRatio,
     "candle.sizeCandles": s.candlesToCheckSize,
     "candle.sizeLookback": s.sizeLookback,
+    "volume.minVsAverage": s.volumeMinRatio,
+    "volume.maxVsAverage": s.volumeMaxRatio,
+    "volume.lookback": s.volumeLookback,
+    "volume.withoutVolume": s.withoutVolume,
     "martingale.type": DEFAULT_MARTINGALE.type,
     "martingale.multiplier": DEFAULT_MARTINGALE.multiplier,
     "martingale.levels": DEFAULT_MARTINGALE.levels,
@@ -74,16 +78,17 @@ export function parseSettingsFile(file: string, raw: unknown): RunSetting[] {
     }
     for (const [sub, v] of Object.entries(value as Record<string, unknown>)) {
       const path = `${key}.${sub}`;
-      if (path === "martingale.type") {
+      const options = CHOICE_FIELDS[path];
+      if (options) {
         const list = Array.isArray(v) ? v : [v];
-        if (list.length === 0 || list.some((t) => t !== "standard" && t !== "recovery")) problems.push(`"${path}" must be "standard" or "recovery"`);
+        if (list.length === 0 || list.some((t) => !options.includes(t as string))) problems.push(`"${path}" must be ${options.map((o) => `"${o}"`).join(" or ")}`);
         else choices.set(path, list as string[]);
         continue;
       }
       const field = FIELD_BY_PATH.get(path);
       if (!field) {
-        const known = NUMBER_FIELDS.filter((f) => f.path.startsWith(`${key}.`)).map((f) => f.path.split(".")[1]);
-        problems.push(`unknown setting "${path}" (known in ${key}: ${[...known, ...(key === "martingale" ? ["type"] : [])].join(", ")})`);
+        const known = [...NUMBER_FIELDS.map((f) => f.path), ...Object.keys(CHOICE_FIELDS)].filter((p) => p.startsWith(`${key}.`)).map((p) => p.split(".")[1]);
+        problems.push(`unknown setting "${path}" (known in ${key}: ${known.join(", ")})`);
         continue;
       }
       const list = Array.isArray(v) ? v : [v];
@@ -136,8 +141,12 @@ function toRunSetting(file: string, values: Record<string, number | string | str
   const level = values["stochastic.level"] as number;
   signal.stochasticKOversold = 100 - level;
   signal.stochasticDOversold = 100 - level;
+  signal.withoutVolume = values["volume.withoutVolume"] as SignalSettings["withoutVolume"];
   if (signal.sizeLookback + signal.candlesToCheckSize > signal.windowSize) {
     throw new SettingsError(`${file}: candle.sizeLookback + candle.sizeCandles must be at most ${signal.windowSize}`);
+  }
+  if (signal.volumeLookback > signal.windowSize - 1) {
+    throw new SettingsError(`${file}: volume.lookback must be at most ${signal.windowSize - 1} (the candles before the signal candle in the bot's window)`);
   }
   return {
     label: file,

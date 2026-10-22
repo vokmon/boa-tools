@@ -43,6 +43,7 @@ export const SETTING_GROUPS: readonly SettingGroup[] = [
   { key: "bollinger", name: "Bollinger bands", about: "Bands around the average price, as wide as the recent price swings. A PUT needs the candle's high above the upper band, a CALL its low below the lower band." },
   { key: "stochastic", name: "Stochastic", about: "Where the close sits in its recent range, 0 to 100. A PUT needs both %K and %D very high (stretched up), a CALL both very low." },
   { key: "candle", name: "Candle shape and size", about: "The signal candle must be a solid move: a big body, a small wick against the move, several candles of the same colour in a row, and not small compared with recent candles." },
+  { key: "volume", name: "Volume", about: "The signal candle's volume (how much was traded in that minute) against the average of the candles just before it. Not part of the bot's signal today; off unless set. IQ Option reports no volume for OTC assets." },
   { key: "martingale", name: "Martingale", about: "What happens after a losing order: the next order goes in the same direction on the next candle with a bigger stake, up to the last level." },
   { key: "order", name: "Order", about: "The stake of the first order and the payout of a win." },
 ];
@@ -65,6 +66,10 @@ export const SETTING_GUIDE: Readonly<Record<string, GuideEntry & { higher: strin
   "candle.minSizeVsAverage": { name: "Minimum size vs recent average", text: "The latest candles' bodies must each be at least this many times the average body of the candles before them.", higher: "Higher: needs bigger candles than usual, fewer signals." },
   "candle.sizeCandles": { name: "Candles checked for size", text: "How many latest candles the size rule applies to.", higher: "Higher: stricter, fewer signals." },
   "candle.sizeLookback": { name: "Candles in the average size", text: "How many earlier candles the average body is taken over.", higher: "Higher: a longer-term average." },
+  "volume.minVsAverage": { name: "Busy signal candle (x average)", text: "The signal candle's volume must be at least this many times the average volume before it, e.g. 2 means double. 0 turns it off.", higher: "Higher: only candles with a bigger burst of trading, fewer signals." },
+  "volume.maxVsAverage": { name: "Quiet signal candle (x average)", text: "The signal candle's volume must be at most this many times the average volume before it, e.g. 0.8. 0 turns it off.", higher: "Higher: allows busier candles, more signals." },
+  "volume.lookback": { name: "Candles in the average volume", text: "How many candles before the signal candle the average volume is taken over.", higher: "Higher: a longer-term average." },
+  "volume.withoutVolume": { name: "Assets without volume", text: "What to do where there is no volume to check (OTC assets): trade ignores the volume rule there, skip does not trade those assets, so only assets with volume trade.", higher: "" },
   "martingale.type": { name: "Martingale type", text: "standard: each level stakes the multiplier times the previous one. recovery: each level is sized to win back all losses plus a normal win.", higher: "" },
   "martingale.multiplier": { name: "Stake multiplier", text: "Standard martingale: each level stakes this times the previous one.", higher: "Higher: wins back losses faster, but a lost round costs far more." },
   "martingale.levels": { name: "Martingale levels", text: "Orders after the first one; 4 means up to 5 orders per round.", higher: "Higher: more rounds end in a win, but a lost round costs far more." },
