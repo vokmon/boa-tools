@@ -1,0 +1,18 @@
+{
+  "note": "The bot's current settings (iq-robot as of 22/10/2026), with 4 martingale levels",
+  "supportResistance": { "period": 25, "zone": 0.92 },
+  "donchian": { "period": 20 },
+  "bollinger": { "period": 14, "stdDev": 2 },
+  "stochastic": { "k": 13, "d": 3, "smooth": 3, "level": 85 },
+  "candle": {
+    "sameColourInARow": 3,
+    "minBody": 0.6,
+    "maxWick": 0.25,
+    "checkLast": 1,
+    "minSizeVsAverage": 0.75,
+    "sizeCandles": 3,
+    "sizeLookback": 35
+  },
+  "martingale": { "type": "standard", "multiplier": 2.5, "levels": 4 },
+  "order": { "amount": 10, "payout": 85 }
+}

@@ -216,3 +216,23 @@ browser / SQL shell).
 Turso free plan (Oct 2026): 5 GB storage (~15 months of candles), 10M rows written and 500M rows read
 per month. Re-collecting all ~60 days is ~8.75M writes, most of a month. Reads count rows scanned, so
 heavy analysis (the backtest) should run on a local copy rather than query Turso repeatedly.
+
+## backtest
+
+Replays the bot on all collected candles with settings files you pick, and shows per setting: rounds
+per day, round win %, at which martingale level rounds win, profit per day, losing days, risk, and
+the best and worst hours to trade (Bangkok time).
+
+```
+bun run backtest                                   # pick settings files from a list (All on top)
+bun run backtest --all
+bun run backtest --settings bot-current,my-idea
+```
+
+- Settings files: `BACKTEST_SETTINGS_DIR` (default `backtest/settings/`). A file holds only the values
+  it changes; anything left out is the bot's current value (`bot-current.json` lists them all). A list
+  (`"level": [80, 85, 90]`) tries each value; `"hours": ["07-11"]` only starts rounds in those hours.
+- Every run first fills missing candles in Turso and updates the local copy (`DATA_DIR`).
+- Results: `BACKTEST_RESULTS_DIR/<date_time>/` (default `<DATA_DIR>/backtest/`): `results.json`,
+  `results.csv`, `ai-brief.md` (paste into an AI to get the next settings files to try) and every
+  tested setting as a settings file under `settings/`.
