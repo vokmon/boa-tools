@@ -221,7 +221,8 @@ heavy analysis (the backtest) should run on a local copy rather than query Turso
 
 Replays the bot on all collected candles with settings files you pick, and shows per setting: rounds
 per day, round win %, at which martingale level rounds win, profit per day, losing days, risk, and
-the best and worst hours to trade (Bangkok time).
+the best and worst hours to trade (Bangkok time). **Field guide: [src/tools/backtest/README.md](src/tools/backtest/README.md)**
+(every number and setting explained). `--html` also writes a one-page `report.html` and opens it.
 
 ```
 bun run backtest                                   # pick settings files from a list (All on top)
@@ -232,7 +233,8 @@ bun run backtest --settings bot-current,my-idea
 - Settings files: `BACKTEST_SETTINGS_DIR` (default `backtest/settings/`). A file holds only the values
   it changes; anything left out is the bot's current value (`bot-current.json` lists them all). A list
   (`"level": [80, 85, 90]`) tries each value; `"hours": ["07-11"]` only starts rounds in those hours.
-- Every run first fills missing candles in Turso and updates the local copy (`DATA_DIR`).
+- Every run first brings Turso up to date from IQ Option (up to now) and updates the local copy
+  (`DATA_DIR`); the backtest uses complete days.
 - Results: `BACKTEST_RESULTS_DIR/<date_time>/` (default `<DATA_DIR>/backtest/`): `results.json`,
   `results.csv`, `ai-brief.md` (paste into an AI to get the next settings files to try) and every
   tested setting as a settings file under `settings/`.

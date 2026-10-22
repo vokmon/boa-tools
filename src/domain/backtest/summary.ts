@@ -1,7 +1,10 @@
-import { LOST, STOPPED, bangkokDay, bangkokHour, type Round } from "./rounds";
+import { BANGKOK_OFFSET_S, LOST, STOPPED, bangkokHour, type Round } from "./rounds";
 
-/** An hour needs at least this many rounds before it is called good or bad. */
-export const MIN_ROUNDS_PER_HOUR = 30;
+/**
+ * An hour needs at least this many rounds before it is called good or bad; with fewer, a couple of
+ * lost rounds decide the hour and the good / avoid pattern is noise.
+ */
+export const MIN_ROUNDS_PER_HOUR = 100;
 /** Days at the end used for the "last 2 weeks" check. */
 export const CHECK_DAYS = 14;
 
@@ -58,27 +61,29 @@ export interface Summary {
  * outside them are ignored.
  */
 export function summarize(rounds: readonly Round[], days: readonly string[], levels: number): Summary {
-  const daySet = new Set(days);
-  const inPeriod = rounds.filter((r) => daySet.has(bangkokDay(r.start)));
+  // Bangkok day of a round by arithmetic (a date string per round is slow over millions of rounds)
+  const dayNumber = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86_400_000;
+  const index = new Map(days.map((d, i) => [dayNumber(d), i]));
+  const dayOf = (r: Round) => index.get(Math.floor((r.start + BANGKOK_OFFSET_S) / 86_400));
+  const inPeriod = rounds.filter((r) => dayOf(r) !== undefined);
   const finished = inPeriod.filter((r) => r.wonAt !== STOPPED);
   const won = finished.filter((r) => r.wonAt >= 0).length;
   const lost = finished.filter((r) => r.wonAt === LOST).length;
   const wonAtLevel = Array.from({ length: levels + 1 }, (_, level) => finished.filter((r) => r.wonAt === level).length);
   const profit = sum(inPeriod.map((r) => r.profit));
 
-  const byDay = new Map(days.map((d) => [d, { day: d, rounds: 0, profit: 0 }]));
+  const daily = days.map((d) => ({ day: d, rounds: 0, profit: 0 }));
   for (const r of inPeriod) {
-    const entry = byDay.get(bangkokDay(r.start))!;
+    const entry = daily[dayOf(r)!]!;
     entry.rounds++;
     entry.profit += r.profit;
   }
-  const daily = [...byDay.values()];
   const worst = daily.reduce<{ day: string; profit: number } | null>((w, d) => (w === null || d.profit < w.profit ? { day: d.day, profit: d.profit } : w), null);
 
   const hours = hourStats(finished, profit / Math.max(1, inPeriod.length));
   const checkSplit = Math.max(0, days.length - CHECK_DAYS);
-  const before = periodStat(inPeriod, new Set(days.slice(0, checkSplit)));
-  const last = periodStat(inPeriod, new Set(days.slice(checkSplit)));
+  const before = periodStat(inPeriod.filter((r) => dayOf(r)! < checkSplit), checkSplit);
+  const last = periodStat(inPeriod.filter((r) => dayOf(r)! >= checkSplit), days.length - checkSplit);
 
   return {
     days: days.length,
@@ -104,15 +109,14 @@ export function summarize(rounds: readonly Round[], days: readonly string[], lev
   };
 }
 
-function periodStat(rounds: readonly Round[], days: Set<string>): PeriodStat {
-  const inDays = rounds.filter((r) => days.has(bangkokDay(r.start)));
+function periodStat(inDays: readonly Round[], days: number): PeriodStat {
   const finished = inDays.filter((r) => r.wonAt !== STOPPED);
   const profit = sum(inDays.map((r) => r.profit));
   return {
-    days: days.size,
+    days,
     rounds: inDays.length,
     roundWinPct: finished.length ? (finished.filter((r) => r.wonAt >= 0).length / finished.length) * 100 : 0,
-    profitPerDay: days.size ? profit / days.size : 0,
+    profitPerDay: days ? profit / days : 0,
     profitPerRound: inDays.length ? profit / inDays.length : 0,
   };
 }

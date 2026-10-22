@@ -97,6 +97,17 @@ describe("yes/no flags", () => {
 
   test("help shows the negatable form", () => {
     expect(formatHelp({ name: "demo", description: "d", options })).toMatch(/--\[no-\]pnl\s+sum profit\/loss/);
+    const help = formatHelp({
+      name: "demo",
+      description: "d",
+      options,
+      env: [
+        { name: "API_KEY", description: "the key" },
+        { name: "OUT_DIR", description: "where files go", default: "data" },
+        { name: "EXTRA", description: "rarely needed", optional: true },
+      ],
+    });
+    expect(help).toContain("Environment (.env):\n  API_KEY   the key (required)\n  OUT_DIR   where files go (default data)\n  EXTRA     rarely needed (optional)");
   });
 
   test("resolveFlag uses the flag, else the fallback without a terminal", async () => {

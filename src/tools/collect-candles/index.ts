@@ -28,6 +28,12 @@ Turso database, one UTC day at a time. Days already collected are skipped, so ru
     to: { type: "string", placeholder: "dd/mm/yyyy", description: "last UTC day, inclusive (default today, stored as partial)" },
     force: { type: "boolean", description: "fetch days again and overwrite stored candles", default: false },
   },
+  env: [
+    { name: "IQ_OPTION_USER", description: "IQ Option login, to fetch candles" },
+    { name: "IQ_OPTION_PASSWORD", description: "IQ Option password" },
+    { name: "TURSO_DATABASE_URL", description: "Turso database for the candles, libsql://…turso.io" },
+    { name: "TURSO_AUTH_TOKEN", description: "Turso token with read and write access" },
+  ],
   notes: `
 The broker keeps only about 60 days of 1-minute candles, so run this at least every few weeks or
 older days are lost. Today and the oldest edge day are stored as partial and fetched again next run.

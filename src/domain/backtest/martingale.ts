@@ -17,6 +17,9 @@ export interface OrderSettings {
   payout: number;
 }
 
+/** Martingale levels every setting is compared at: 0 (one order, no martingale) up to 4. More is too risky. */
+export const LEVELS_TO_COMPARE: readonly number[] = [0, 1, 2, 3, 4];
+
 export const DEFAULT_MARTINGALE: Readonly<MartingaleSettings> = Object.freeze({ type: "standard", multiplier: 2.5, levels: 4 });
 export const DEFAULT_ORDER: Readonly<OrderSettings> = Object.freeze({ amount: 10, payout: 85 });
 
@@ -29,6 +32,23 @@ function roundUpTo2(value: number): number {
 export function nextStake(previousStake: number, lossSoFar: number, martingale: MartingaleSettings, order: OrderSettings): number {
   if (martingale.type === "recovery") return roundUpTo2(lossSoFar / (order.payout / 100) + order.amount);
   return previousStake * martingale.multiplier;
+}
+
+/**
+ * Profit of a round won at each level (index = level), and the loss of a round that loses every
+ * level (last entry, negative). A win at level L pays its own stake x payout minus the earlier losses.
+ */
+export function roundOutcomes(martingale: MartingaleSettings, order: OrderSettings): number[] {
+  const out: number[] = [];
+  let stake = order.amount;
+  let lost = 0;
+  for (let level = 0; level <= martingale.levels; level++) {
+    out.push((stake * order.payout) / 100 - lost);
+    lost += stake;
+    stake = nextStake(stake, lost, martingale, order);
+  }
+  out.push(-lost);
+  return out;
 }
 
 /** Money at risk when every level of a round loses. */

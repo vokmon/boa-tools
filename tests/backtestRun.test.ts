@@ -32,3 +32,26 @@ describe("format", () => {
     expect(again!.signal).toEqual(s!.signal);
   });
 });
+
+describe("martingale levels", () => {
+  test("every setting is also run at 0-4 levels; its own level matches the main result", async () => {
+    const { syntheticCache } = await import("./helpers/syntheticCache");
+    const { LocalCandleCache } = await import("@/storage/LocalCandleCache");
+    const { runBacktest } = await import("@/tools/backtest/runBacktest");
+    const cache = new LocalCandleCache(await syntheticCache());
+    const [result] = runBacktest(cache, parseSettingsFile("x", { martingale: { levels: 2 } }), 60).results;
+    cache.close();
+    expect(result!.levels.map((l) => l.levels)).toEqual([0, 1, 2, 3, 4]);
+    const own = result!.levels.find((l) => l.levels === 2)!;
+    expect(own.summary.rounds).toBe(result!.summary.rounds);
+    expect(own.summary.profitPerDay).toBeCloseTo(result!.summary.profitPerDay, 6);
+    // No martingale: one order per round, a lost round costs one stake
+    expect(result!.levels[0]!.worstRound).toBe(10);
+    const none = result!.levels[0]!.summary;
+    expect(none.roundWinPct).toBeCloseTo(((none.wonAtLevel[0] ?? 0) / (none.rounds - none.stopped)) * 100, 6);
+    expect(none.wonAtLevel).toHaveLength(1);
+    // Each level is a full summary of its own: hours, days, assets
+    expect(result!.levels[1]!.summary.hours).toHaveLength(24);
+    expect(result!.levels[1]!.byAsset.map((a) => a.name).sort()).toEqual(["A1", "A2", "A3"]);
+  });
+});

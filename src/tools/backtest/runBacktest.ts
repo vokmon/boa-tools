@@ -1,7 +1,7 @@
 import { SignalEngine } from "@/domain/signal";
 import { BANGKOK_OFFSET_S, simulateRounds, type Round } from "@/domain/backtest/rounds";
 import { summarize, type Summary } from "@/domain/backtest/summary";
-import { worstCaseStake } from "@/domain/backtest/martingale";
+import { LEVELS_TO_COMPARE, worstCaseStake } from "@/domain/backtest/martingale";
 import type { LocalCandleCache } from "@/storage/LocalCandleCache";
 import type { RunSetting } from "./settings/settingsFile";
 
@@ -15,13 +15,36 @@ export interface BacktestPeriod {
   to: number;
 }
 
+export interface AssetResult {
+  activeId: number;
+  name: string;
+  isOtc: boolean;
+  rounds: number;
+  lost: number;
+  profit: number;
+}
+
+/** One setting played with one maximum martingale level: everything the report shows for it. */
+export interface LevelResult {
+  /** Martingale orders allowed after the first one (0 = no martingale). */
+  levels: number;
+  summary: Summary;
+  /** Money lost when every order of one round loses. */
+  worstRound: number;
+  /** Per asset, best first. */
+  byAsset: AssetResult[];
+}
+
 export interface SettingResult {
   setting: RunSetting;
+  /** At the setting's own martingale level (the file's martingale.levels). */
   summary: Summary;
-  /** Money at risk if every level of one round loses. */
+  /** Money at risk if every level of one round loses, at the setting's own level. */
   worstCaseStake: number;
-  /** Per asset: rounds, round win % and profit, for the detail view and the AI brief. */
-  byAsset: { activeId: number; name: string; isOtc: boolean; rounds: number; lost: number; profit: number }[];
+  /** Per asset at the setting's own level, best first. */
+  byAsset: AssetResult[];
+  /** The same signal with max martingale 0 … 4 (and the setting's own level, if different). */
+  levels: LevelResult[];
 }
 
 export interface BacktestResult {
@@ -47,12 +70,22 @@ export function bangkokPeriod(utcDays: readonly string[]): BacktestPeriod {
   return { days, from, to };
 }
 
-/** Runs every setting over every asset in the local copy; `onAsset` reports progress. */
+/** Levels a setting is played at: 0 … 4, plus its own level if it is outside that. */
+function levelsFor(setting: RunSetting): number[] {
+  return [...new Set([...LEVELS_TO_COMPARE, setting.martingale.levels])].sort((a, b) => a - b);
+}
+
+/**
+ * Runs every setting over every asset in the local copy, at max martingale 0 … 4 (the signals are
+ * computed once per setting and asset; only the rounds are replayed). `onAsset` reports progress.
+ */
 export function runBacktest(cache: LocalCandleCache, settings: readonly RunSetting[], size: number, onAsset?: () => void): BacktestResult {
   const period = bangkokPeriod(cache.days(size));
   const assets = cache.assets();
-  const rounds: Round[][] = settings.map(() => []);
-  const perAsset = settings.map(() => [] as SettingResult["byAsset"]);
+  const levels = settings.map(levelsFor);
+  // rounds[setting][level index], perAsset[setting][level index]
+  const rounds: Round[][][] = settings.map((_, i) => levels[i]!.map(() => []));
+  const perAsset: AssetResult[][][] = settings.map((_, i) => levels[i]!.map(() => []));
   let candleCount = 0;
 
   for (const asset of assets) {
@@ -60,22 +93,25 @@ export function runBacktest(cache: LocalCandleCache, settings: readonly RunSetti
     candleCount += candles.length;
     const engine = new SignalEngine(candles, size);
     settings.forEach((setting, i) => {
-      const assetRounds = simulateRounds(asset.activeId, candles, engine.signals(setting.signal), {
-        size,
-        martingale: setting.martingale,
-        order: setting.order,
-        hours: setting.hours,
-        from: period.from,
-        to: period.to,
-      });
-      rounds[i]!.push(...assetRounds);
-      perAsset[i]!.push({
-        activeId: asset.activeId,
-        name: asset.name,
-        isOtc: asset.isOtc,
-        rounds: assetRounds.length,
-        lost: assetRounds.filter((r) => r.wonAt === -1).length,
-        profit: assetRounds.reduce((s, r) => s + r.profit, 0),
+      const signals = engine.signals(setting.signal);
+      levels[i]!.forEach((maxLevel, l) => {
+        const assetRounds = simulateRounds(asset.activeId, engine, signals, {
+          size,
+          martingale: { ...setting.martingale, levels: maxLevel },
+          order: setting.order,
+          hours: setting.hours,
+          from: period.from,
+          to: period.to,
+        });
+        for (const r of assetRounds) rounds[i]![l]!.push(r);
+        perAsset[i]![l]!.push({
+          activeId: asset.activeId,
+          name: asset.name,
+          isOtc: asset.isOtc,
+          rounds: assetRounds.length,
+          lost: assetRounds.filter((r) => r.wonAt === -1).length,
+          profit: assetRounds.reduce((sum, r) => sum + r.profit, 0),
+        });
       });
     });
     onAsset?.();
@@ -85,11 +121,15 @@ export function runBacktest(cache: LocalCandleCache, settings: readonly RunSetti
     period,
     assets: assets.length,
     candles: candleCount,
-    results: settings.map((setting, i) => ({
-      setting,
-      summary: summarize(rounds[i]!, period.days, setting.martingale.levels),
-      worstCaseStake: worstCaseStake(setting.martingale, setting.order),
-      byAsset: perAsset[i]!.sort((a, b) => b.profit - a.profit),
-    })),
+    results: settings.map((setting, i) => {
+      const views = levels[i]!.map((maxLevel, l): LevelResult => ({
+        levels: maxLevel,
+        summary: summarize(rounds[i]![l]!, period.days, maxLevel),
+        worstRound: worstCaseStake({ ...setting.martingale, levels: maxLevel }, setting.order),
+        byAsset: perAsset[i]![l]!.sort((a, b) => b.profit - a.profit),
+      }));
+      const own = views.find((v) => v.levels === setting.martingale.levels)!;
+      return { setting, summary: own.summary, worstCaseStake: own.worstRound, byAsset: own.byAsset, levels: views };
+    }),
   };
 }

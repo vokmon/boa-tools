@@ -39,6 +39,15 @@ export function resultLines(run: BacktestResult): string[] {
     { value: (r) => (r ? `❌ ${hourList(r.summary.avoidHours)}` : "Avoid") },
   ];
 
+  const levelCols: TableColumn<SettingResult | null>[] = [
+    { value: (r) => (r ? r.setting.label : "Setting"), maxWidth: 60 },
+    ...rows[0]!.levels.map((l, i): TableColumn<SettingResult | null> => ({
+      value: (r) => (r ? money(r.levels[i]!.summary.profitPerDay) : l.levels === 0 ? "No mart." : `Up to ${l.levels}`),
+      align: "right",
+    })),
+    { value: (r) => (r ? `⭐ ${[...r.levels].sort((a, b) => b.summary.profitPerDay - a.summary.profitPerDay)[0]!.levels}` : "Best") },
+  ];
+
   const days = run.period.days;
   return [
     `   ${days.length} days (${days[0]} → ${days.at(-1)}, Bangkok) · ${run.assets} assets · order ${first.order.amount} THB · payout ${first.order.payout}% · martingale up to ${first.martingale.levels} levels · money in THB`,
@@ -47,6 +56,9 @@ export function resultLines(run: BacktestResult): string[] {
     "",
     "   💰 Money and risk",
     ...renderTable([null, ...rows], risk, "   "),
+    "",
+    "   🎚️  Martingale levels: profit per day of the same signal with 0 … 4 martingale orders",
+    ...renderTable([null, ...rows], levelCols, "   "),
     "",
     "   🕐 When to trade (Bangkok time)",
     ...renderTable([null, ...rows], hours, "   "),

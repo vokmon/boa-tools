@@ -7,6 +7,7 @@ export {
   formatHelp,
   parseCommandArgs,
   type CommandDefinition,
+  type EnvVar,
   type OptionDefinitions,
   type OptionValues,
 } from "./defineCommand";

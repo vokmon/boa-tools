@@ -1,6 +1,11 @@
 import type { SettingResult } from "../runBacktest";
 import { defaultValues } from "../settings/settingsFile";
 
+/** First-order win rate needed to break even at this payout, in percent (54.05 at 85%). */
+export function breakEvenPct(payout: number): number {
+  return 100 / (1 + payout / 100);
+}
+
 /** 1240.5 -> "+1,241", -95 -> "-95" */
 export function money(n: number): string {
   const rounded = Math.round(n);

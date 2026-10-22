@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backtest report</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #6b7385; --line: #e3e6ec;
+    --good: #1f9d55; --good-soft: #e3f5ea; --bad: #d64545; --bad-soft: #fbe7e7; --warn: #c98a00; --warn-soft: #fdf3dc;
+    --accent: #3b6fd8; --accent-soft: #e6eefc; --few: #c4c9d4;
+    --l0: #1f9d55; --l1: #4fb286; --l2: #7cc4b4; --l3: #e0b14a; --l4: #e58a3a; --l5: #e8692f; --l6: #ea5a2c; --l7: #ec4b2a; --l8: #ee3c28; --lost: #d64545;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151c; --panel: #1b1f29; --text: #e6e9ef; --muted: #9aa3b5; --line: #2c3240;
+      --good: #3ccb7f; --good-soft: #173526; --bad: #f06a6a; --bad-soft: #3a1d1f; --warn: #f0b429; --warn-soft: #3a2e12;
+      --accent: #6d9bff; --accent-soft: #1d2a45; --few: #4a5263;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif; }
+  main { max-width: 1320px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 40px 0 12px; display: flex; gap: 10px; align-items: baseline; }
+  h2 .n { color: var(--accent); }
+  h3 { font-size: 15px; margin: 0 0 10px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+  .tile .label { color: var(--muted); font-size: 13px; }
+  .tile .value { font-size: 24px; font-weight: 650; margin-top: 2px; overflow-wrap: anywhere; }
+  .tile .sub { color: var(--muted); font-size: 13px; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; font-size: 14px; }
+  th { color: var(--muted); font-weight: 550; font-size: 13px; cursor: help; }
+  th.best { color: var(--good); }
+  .chips-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 12px; }
+  .lvl-pick { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .lvl-pick.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .switch { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 14px -16px 0; padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .lvl { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 8px; padding: 5px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+  .lvl.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  th:first-child, td:first-child { text-align: left; }
+  td.best { background: var(--good-soft); font-weight: 650; }
+  tr.today td:first-child::after { content: "today"; margin-left: 8px; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tab { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; }
+  .tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .stackbar { display: flex; height: 30px; border-radius: 8px; overflow: hidden; }
+  .stackbar div { height: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 13px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; background: var(--c); vertical-align: -1px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { font-size: 13px; padding: 2px 10px; border-radius: 999px; }
+  .chip.good { background: var(--good-soft); } .chip.bad { background: var(--bad-soft); }
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+  .stat .k { color: var(--muted); font-size: 13px; }
+  .stat .v { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 14px; }
+  .kv .changed { font-weight: 700; color: var(--accent); }
+  .kv .was { color: var(--muted); font-size: 12px; font-weight: 400; margin-left: 6px; }
+  .group-name { grid-column: 1 / -1; margin-top: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .card h3 { margin-bottom: 4px; }
+  .card p { margin: 0; font-size: 14px; }
+  .card .higher { margin-top: 6px; color: var(--muted); font-size: 13px; }
+  .card .bot { margin-top: 6px; font-size: 12px; color: var(--accent); }
+  svg text { fill: var(--muted); font-size: 11px; }
+  .outcomes { display: grid; grid-template-columns: 3.6em 8.5em 1fr 4.5em; gap: 4px 10px; align-items: center; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .outcomes .head { color: var(--muted); font-size: 12px; }
+  .outcomes .count { font-size: 18px; font-weight: 700; text-align: right; }
+  .outcomes .track { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+  .outcomes .fill { height: 100%; border-radius: 5px; }
+  .outcomes .money { text-align: right; font-weight: 600; }
+  .verdict-line { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; }
+  .verdict-line b { font-size: 16px; }
+  .gauge { position: relative; height: 10px; border-radius: 5px; background: var(--line); }
+  .gauge .val { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+  .gauge .mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text); }
+  .calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; font-variant-numeric: tabular-nums; }
+  .calendar .wd { text-align: center; font-size: 11px; color: var(--muted); }
+  .calendar .day { border-radius: 4px; padding: 3px 4px; min-height: 36px; font-size: 11px; line-height: 1.25; }
+  .calendar .day .d { color: var(--muted); }
+  .calendar .day .p { font-weight: 650; font-size: 12px; }
+  .calendar .day.empty { background: transparent; }
+  .hourlists { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; font-size: 14px; }
+  .hourlists ul { margin: 4px 0 0; padding-left: 18px; }
+  .money-grid { display: grid; gap: 12px; }
+  .money-row { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+  .money-row .icon { font-size: 20px; line-height: 1.2; }
+  .money-row .k { color: var(--muted); font-size: 13px; }
+  .money-row .v { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .money-row .s { font-size: 13px; color: var(--muted); }
+  .note { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+  footer { margin-top: 48px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 860px) {
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid2, .cards { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<!-- The backtest writes this run's data here -->
+<script id="report-data" type="application/json">__REPORT_DATA__</script>
+<script>
+(() => {
+  const data = JSON.parse(document.getElementById("report-data").textContent);
+  const app = document.getElementById("app");
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const money = (n) => { const r = Math.round(n); return (r > 0 ? "+" : "") + r.toLocaleString("en-US"); };
+  const pct = (n, d = 1) => n.toFixed(d) + "%";
+  const sign = (n) => (n > 0 ? "good" : n < 0 ? "bad" : "");
+  /** 13543 -> "13.5k", 950 -> "950" */
+  const short = (n) => { const a = Math.abs(n), t = a >= 1000 ? `${(a / 1000).toFixed(1)}k` : String(Math.round(a)); return (n > 0 ? "+" : n < 0 ? "−" : "") + t; };
+  /** "2026-10-14" -> "14/10" */
+  const dm = (day) => `${day.slice(8)}/${day.slice(5, 7)}`;
+  const clock = (hour) => `${String(hour % 24).padStart(2, "0")}:00`;
+  /** "07-11" -> "07:00 – 11:00" */
+  const hourRange = (range) => { const [a, b] = range.split("-").map(Number); return `${clock(a)} – ${b === 24 ? "24:00" : clock(b)}`; };
+  const guideText = (name) => (data.guide.results.find((g) => g.name === name) || {}).text || "";
+  const levelColor = (i, levels) => (i > levels ? "var(--lost)" : `var(--l${Math.min(i, 8)})`);
+  const settings = data.settings;
+  const bot = settings.find((s) => s.isBot);
+  // The max martingale level the page shows: "own" = each setting's level from its file
+  let level = "own";
+  let tab = 0;
+  const vw = (s) => s.views[String(level === "own" ? s.ownLevel : level)] || s.views[String(s.ownLevel)];
+  const levelName = (l) => (l === 0 ? "no martingale" : `max martingale ${l}`);
+  const levelLabel = (l) => (l === 0 ? "No martingale" : `Max ${l}`);
+  const setLevel = (value) => {
+    level = value === "own" ? "own" : Number(value);
+    render();
+  };
+
+  function render() {
+    const best = [...settings].sort((a, b) => vw(b).summary.profitPerDay - vw(a).summary.profitPerDay)[0];
+    const top = vw(best).summary;
+    const showing = level === "own" ? "each setting at its own max martingale" : `every setting at ${levelName(level)}`;
+
+    // Header, the level switch and tiles
+    let html = `
+      <h1>🧪 Backtest report</h1>
+      <div class="muted">${data.period.days} days (${data.period.from} → ${data.period.to}, Bangkok time) · ${data.assets} assets · ${data.candles.toLocaleString("en-US")} one-minute candles ·
+        order ${data.order.amount} THB · payout ${data.order.payout}% · money in THB</div>
+      <div class="switch"><span class="muted small">Max martingale</span>
+        ${["own", ...data.levelOptions].map((o) => `<button class="lvl${String(level) === String(o) ? " on" : ""}" data-level="${o}">${o === "own" ? "Each setting's own" : o === 0 ? "None" : o}</button>`).join("")}
+        <span class="muted small">showing ${showing}</span></div>`;
+    html += `<div class="tiles">
+      <div class="panel tile"><div class="label">Best setting (profit per day)</div><div class="value">${esc(best.label)}</div>
+        <div class="sub">at ${levelName(vw(best).levels)}${best.isBot ? " · the bot's settings" : ""}</div></div>
+      <div class="panel tile"><div class="label">Profit per day</div><div class="value ${sign(top.profitPerDay)}">${money(top.profitPerDay)}</div>
+        <div class="sub">${bot && bot !== best ? `bot: ${money(vw(bot).summary.profitPerDay)} at ${levelName(vw(bot).levels)}` : `${money(top.profit)} over ${top.days} days`}</div></div>
+      <div class="panel tile"><div class="label">First order wins</div><div class="value ${top.firstOrderWinPct >= data.breakEvenPct ? "good" : "bad"}">${pct(top.firstOrderWinPct)}</div>
+        <div class="sub">needs ${pct(data.breakEvenPct, 2)} to break even</div></div>
+      <div class="panel tile"><div class="label">Last ${data.checkDays} days</div><div class="value">${top.check.heldUp ? "✅ held up" : "⚠️ dropped"}</div>
+        <div class="sub">${money(top.check.beforePerDay)} → ${money(top.check.lastPerDay)} per day</div></div>
+    </div>`;
+
+    // ① Compare
+    const shownLevels = Math.max(...settings.map((s) => vw(s).levels));
+    const cols = [
+      { name: "Max mart.", guide: "Martingale levels", get: (s) => vw(s).levels, show: (v) => (v === 0 ? "none" : v) },
+      { name: "Rounds per day", get: (s) => vw(s).summary.roundsPerDay, show: (v) => v.toFixed(0) },
+      { name: "Round win", get: (s) => vw(s).summary.roundWinPct, show: (v) => pct(v), best: "max" },
+      // Where rounds won: first order, then each martingale level
+      ...Array.from({ length: shownLevels + 1 }, (_, l) => ({
+        name: l === 0 ? "First order" : `Mart. ${l}`,
+        guide: "First order, Martingale 1 … 4",
+        get: (s) => vw(s).summary.endShares[l] ?? 0,
+        show: (v, s) => (l < vw(s).summary.endShares.length - 1 ? pct(v, 0) : "-"),
+        best: l === 0 ? "max" : null,
+      })),
+      { name: "Lost all", get: (s) => vw(s).summary.lostPct, show: (v) => pct(v), best: "min" },
+      { name: "Profit per day", get: (s) => vw(s).summary.profitPerDay, show: (v) => `<span class="${sign(v)}">${money(v)}</span>`, best: "max" },
+      { name: "Losing days", get: (s) => vw(s).summary.losingDays, show: (v, s) => `${v}/${vw(s).summary.days}`, best: "min" },
+      { name: "Biggest drop", get: (s) => vw(s).summary.biggestDrop, show: (v) => money(v), best: "max" },
+      { name: "Last 2 weeks", get: (s) => (vw(s).summary.check.heldUp ? 1 : 0), show: (v, s) => `${v ? "✅" : "⚠️"} ${money(vw(s).summary.check.lastPerDay)}/day` },
+      { name: "Best level", guide: "Martingale levels", get: (s) => s.bestLevel, show: (v, s) => `${v === 0 ? "none" : v} <span class="muted small">${money(s.views[String(v)].summary.profitPerDay)}/day</span>` },
+    ];
+    const bestOf = cols.map((c) => (c.best ? (c.best === "max" ? Math.max : Math.min)(...settings.map(c.get)) : null));
+    html += `<h2><span class="n">①</span> Compare <span class="muted small">${showing}</span></h2><div class="panel table-wrap"><table><thead><tr><th>Setting</th>
+      ${cols.map((c) => `<th title="${esc(guideText(c.guide || c.name))}">${c.name}</th>`).join("")}</tr></thead><tbody>
+      ${settings.map((s) => `<tr class="${s === bot ? "today" : ""}"><td>${esc(s.label)}</td>${cols
+        .map((c, i) => `<td class="${bestOf[i] !== null && c.get(s) === bestOf[i] && settings.length > 1 ? "best" : ""}">${c.show(c.get(s), s)}</td>`)
+        .join("")}</tr>`).join("")}</tbody></table>
+      <p class="note">First order, Mart. 1 … = out of 100 rounds, how many were won by the first order, or by martingale 1, 2, … Best level = the max martingale with the most profit per day for that setting. Green = best in the column.</p></div>`;
+
+    // ② One setting at a time
+    html += `<h2><span class="n">②</span> One setting at a time <span class="muted small">${showing}</span></h2>
+      <div class="tabs">${settings.map((s, i) => `<button class="tab${i === tab ? " on" : ""}" data-tab="${i}">${esc(s.label)}</button>`).join("")}</div>
+      <div id="detail"></div>`;
+
+    // ③ What the numbers mean, ④ What the settings do
+    html += `<h2><span class="n">③</span> What the numbers mean</h2><div class="cards">
+      ${data.guide.results.map((g) => `<div class="panel card"><h3>${esc(g.name)}</h3><p>${esc(g.text)}</p></div>`).join("")}</div>`;
+    html += `<h2><span class="n">④</span> What the settings do</h2>
+      ${data.guide.groups.map((g) => `<div class="panel" style="margin-bottom:12px"><h3>${esc(g.name)}</h3><p class="muted small" style="margin:0 0 12px">${esc(g.about)}</p>
+        <div class="cards">${g.settings.map((s) => `<div class="card"><h3>${esc(s.name)}</h3><p>${esc(s.text)}</p>
+          ${s.higher ? `<div class="higher">${esc(s.higher)}</div>` : ""}<div class="bot">${esc(s.path)} · bot: ${esc(s.bot)}</div></div>`).join("")}</div></div>`).join("")}`;
+    html += `<footer>Generated ${new Date(data.createdAt).toLocaleString()} by bun run backtest. Simulation: each order buys at its candle's open and settles at its close.</footer>`;
+    app.innerHTML = html;
+
+    document.querySelectorAll(".lvl").forEach((b) => b.addEventListener("click", () => setLevel(b.dataset.level)));
+    document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(Number(t.dataset.tab))));
+    show(tab);
+  }
+
+  function show(i) {
+    tab = i;
+    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", Number(t.dataset.tab) === i));
+    document.getElementById("detail").innerHTML = settingPanel(settings[i]);
+    document.querySelectorAll(".lvl-pick").forEach((b) => b.addEventListener("click", () => setLevel(b.dataset.level)));
+  }
+
+  function settingPanel(s) {
+    const v = vw(s);
+    const m = v.summary;
+    return `
+      <p class="muted" style="margin-top:0"><b>${esc(s.label)}</b> at <b>${levelName(v.levels)}</b>${s.note ? ` · ${esc(s.note)}` : ""}</p>
+      ${levelChips(s, v.levels)}
+      <div class="grid2">
+        <div class="panel"><h3>How rounds end</h3>${outcomes(m)}</div>
+        <div class="panel"><h3>When to trade <span class="muted small">(Bangkok time)</span></h3>${hoursChart(m.hours)}${hourLists(m)}</div>
+        <div class="panel"><h3>Profit day by day</h3>${dailyChart(m)}</div>
+        <div class="panel"><h3>Money and risk</h3>${moneyBlocks(m)}</div>
+        <div class="panel"><h3>Settings used <span class="muted small">(changed from the bot in blue)</span></h3><div class="kv">
+          ${s.groups.map((g) => `<div class="group-name">${esc(g.name)}</div>${g.items.map((it) => `<div>${esc(it.name)}</div>
+            <div class="${it.changed ? "changed" : ""}">${esc(it.value)}${it.changed ? `<span class="was">bot ${esc(it.bot)}</span>` : ""}</div>`).join("")}`).join("")}
+        </div></div>
+        <div class="panel"><h3>Best and worst assets</h3><div class="kv">
+          <div class="group-name">Best</div>${v.bestAssets.map((a) => `<div>${esc(a.name)} <span class="muted small">${a.rounds} rounds</span></div><div class="${sign(a.profit)}">${money(a.profit)}</div>`).join("")}
+          <div class="group-name">Worst</div>${v.worstAssets.map((a) => `<div>${esc(a.name)} <span class="muted small">${a.rounds} rounds</span></div><div class="${sign(a.profit)}">${money(a.profit)}</div>`).join("")}
+        </div></div>
+      </div>`;
+  }
+
+  /** Out of 100 rounds: on which try they were won (or lost), what each earns, and the first try against break-even. */
+  function outcomes(m) {
+    const levels = m.endShares.length - 2;
+    const top = Math.max(...m.endShares);
+    const rows = m.endShares.map((p, i) => {
+      const lost = i > levels;
+      const hint = lost ? `every one of the ${levels + 1} orders lost` : i === 0 ? "the first order won, no martingale" : `won after ${i} loss${i > 1 ? "es" : ""} (martingale level ${i})`;
+      return `<div class="count ${lost ? "bad" : ""}" title="${hint}">${p >= 1 || p === 0 ? Math.round(p) : "<1"}</div>
+        <div title="${hint}">${lost ? "❌ Lost all" : i === 0 ? "✅ First order" : `✅ Martingale ${i}`}</div>
+        <div class="track" title="${hint}"><div class="fill" style="width:${(p / top) * 100}%;background:${levelColor(i, levels)}"></div></div>
+        <div class="money ${sign(m.endMoney[i])}">${money(m.endMoney[i])}</div>`;
+    });
+    const gap = m.firstOrderWinPct - data.breakEvenPct;
+    const ok = gap >= 0;
+    const lo = 40, hi = 60, at = (v) => Math.min(100, Math.max(0, ((v - lo) / (hi - lo)) * 100));
+    const why = ok
+      ? "The first order wins often enough to make money."
+      : `Martingale turns ${m.roundWinPct.toFixed(0)} of 100 rounds into wins, but the lost rounds cost more than all the wins bring.`;
+    return `<div class="outcomes">
+        <div class="head" style="text-align:right;white-space:nowrap">of 100</div><div class="head">rounds</div><div></div><div class="head" style="text-align:right">THB each</div>
+        ${rows.join("")}</div>
+      <div class="verdict-line" title="${why}">
+        <span>First order wins <b class="${ok ? "good" : "bad"}">${m.firstOrderWinPct.toFixed(1)}%</b></span>
+        <div class="gauge"><div class="val" style="width:${at(m.firstOrderWinPct)}%;background:${ok ? "var(--good)" : "var(--bad)"}"></div><div class="mark" style="left:${at(data.breakEvenPct)}%"></div></div>
+        <span>needs <b>${data.breakEvenPct.toFixed(1)}%</b> &nbsp;${ok ? `✅ ${gap.toFixed(1)} above` : `❌ ${(-gap).toFixed(1)} short`}</span>
+      </div>`;
+  }
+
+  function hourLists(m) {
+    const list = (ranges, empty) => (ranges.length ? `<ul>${ranges.map((r) => `<li>${hourRange(r)}</li>`).join("")}</ul>` : `<div class="muted small">${empty}</div>`);
+    return `<div class="hourlists">
+      <div><b class="good">✅ Best hours</b>${list(m.goodHours, "none: no hour earned clearly")}</div>
+      <div><b class="bad">❌ Avoid</b>${list(m.avoidHours, "none")}</div></div>`;
+  }
+
+  function hoursChart(hours) {
+    const w = 480, h = 150, top = 10, bottom = 22, bw = w / 24;
+    const max = Math.max(1, ...hours.map((x) => Math.abs(x.profit)));
+    const mid = top + (h - top - bottom) / 2;
+    const scale = (h - top - bottom) / 2 / max;
+    const colour = { good: "var(--good)", ok: "var(--l2)", avoid: "var(--bad)", few: "var(--few)" };
+    const bars = hours.map((x) => {
+      const bh = Math.max(1, Math.abs(x.profit) * scale);
+      const y = x.profit >= 0 ? mid - bh : mid;
+      return `<rect x="${x.hour * bw + 2}" y="${y}" width="${bw - 4}" height="${bh}" rx="2" fill="${colour[x.status]}"><title>${clock(x.hour)}–${clock(x.hour + 1)} · ${x.rounds} rounds · round win ${pct(x.winPct)} · ${money(x.profit)} THB</title></rect>`;
+    });
+    const labels = [0, 3, 6, 9, 12, 15, 18, 21].map((hr) => `<text x="${hr * bw + 1}" y="${h - 6}" text-anchor="start">${clock(hr)}</text>`);
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Profit by hour"><line x1="0" x2="${w}" y1="${mid}" y2="${mid}" stroke="var(--line)"/>${bars.join("")}${labels.join("")}</svg>
+      <div class="legend"><span style="--c:var(--good)">earns well</span><span style="--c:var(--l2)">earns a little</span><span style="--c:var(--bad)">loses</span><span style="--c:var(--few)">too few rounds to tell</span></div>
+      <p class="note">Each bar is one hour of the day: the money rounds starting in that hour made over the whole test. Hover a bar for details.</p>`;
+  }
+
+  /** A calendar of the test days (a row per week, Monday first), each day coloured by its profit; then the running total. */
+  function dailyChart(m) {
+    const days = m.daily;
+    if (!days.length) return `<p class="muted">No rounds.</p>`;
+    const biggest = Math.max(1, ...days.map((d) => Math.abs(d.profit)));
+    const tint = (p) => {
+      const strength = 0.15 + 0.85 * Math.min(1, Math.abs(p) / biggest);
+      const colour = p >= 0 ? "31, 157, 85" : "214, 69, 69";
+      return `rgba(${colour}, ${strength.toFixed(2)})`;
+    };
+    // Monday = 0; pad the first week so days line up under their weekday
+    const weekday = (day) => (new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7;
+    const cells = Array.from({ length: weekday(days[0].day) }, () => `<div class="day empty"></div>`);
+    for (const d of days) {
+      const strong = Math.abs(d.profit) / biggest > 0.5;
+      cells.push(`<div class="day" style="background:${tint(d.profit)};${strong ? "color:#fff" : ""}" title="${d.day}: ${money(d.profit)} THB">
+        <div class="d" style="${strong ? "color:rgba(255,255,255,.85)" : ""}">${dm(d.day)}</div><div class="p">${short(d.profit)}</div></div>`);
+    }
+    const head = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => `<div class="wd">${w}</div>`).join("");
+
+    // Running total, with a date label each week
+    const w = 480, h = 120, left = 58, right = 8, top = 8, bottom = 24;
+    let total = 0;
+    const running = days.map((d) => (total += d.profit));
+    const lo = Math.min(0, ...running), hi = Math.max(0, ...running);
+    const x = (i) => left + (i / Math.max(1, days.length - 1)) * (w - left - right);
+    const y = (v) => top + ((hi - v) / Math.max(1, hi - lo)) * (h - top - bottom);
+    const line = running.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    const ticks = [hi, 0, lo].filter((v, i, a) => a.indexOf(v) === i).map((v) => `<text x="${left - 6}" y="${y(v) + 4}" text-anchor="end">${short(v)}</text>`).join("");
+    const weeks = days.map((d, i) => (weekday(d.day) === 0 ? `<line x1="${x(i)}" x2="${x(i)}" y1="${top}" y2="${h - bottom}" stroke="var(--line)"/><text x="${x(i)}" y="${h - 6}" text-anchor="middle">${dm(d.day)}</text>` : "")).join("");
+    const end = running.at(-1);
+
+    return `<div class="calendar">${head}${cells.join("")}</div>
+      <div class="legend"><span style="--c:rgba(31,157,85,.9)">day in profit</span><span style="--c:rgba(214,69,69,.9)">day with a loss</span><span class="muted">darker = bigger amount · THB</span></div>
+      <div class="muted small" style="margin-top:12px">Running total</div>
+      <svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Running total">${weeks}
+        <line x1="${left}" x2="${w - right}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" stroke-dasharray="3 3"/>
+        <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2"/>${ticks}</svg>
+      <p class="note"><b>${m.daysInProfit}</b> of ${days.length} days ended in profit · total after ${days.length} days: <b class="${sign(end)}">${money(end)} THB</b></p>`;
+  }
+
+  /** One line: this setting's profit per day at each max martingale; ⭐ best; click to switch the page. */
+  function levelChips(s, shown) {
+    const views = Object.values(s.views).sort((a, b) => a.levels - b.levels);
+    return `<div class="chips-line"><span class="muted small">Profit per day by max martingale:</span>
+      ${views.map((v) => `<button class="lvl-pick${v.levels === shown ? " on" : ""}" data-level="${v.levels}" title="See everything for ${esc(s.label)} at ${levelName(v.levels)}">
+        ${v.levels === 0 ? "None" : v.levels} <b class="${sign(v.summary.profitPerDay)}">${money(v.summary.profitPerDay)}</b>${v.levels === s.bestLevel ? " ⭐" : ""}</button>`).join("")}</div>`;
+  }
+
+  /** The money numbers as five plain statements. */
+  function moneyBlocks(m) {
+    const row = (icon, k, v, s, cls = "") => `<div class="money-row"><div class="icon">${icon}</div><div><div class="k">${k}</div><div class="v ${cls}">${v}</div><div class="s">${s}</div></div></div>`;
+    return `<div class="money-grid">
+      ${row("💰", "You would earn per day", `${money(m.profitPerDay)} THB`, `${money(m.profit)} THB over the ${m.days} days, all assets together`, sign(m.profitPerDay))}
+      ${row("📅", "Days that ended with a loss", `${m.losingDays} of ${m.days}`, m.worstDay ? `the worst lost ${money(m.worstDay.profit)} THB (${m.worstDay.day.slice(8)}/${m.worstDay.day.slice(5, 7)})` : "no losing day")}
+      ${row("🏦", "Balance to keep", `${money(-m.biggestDrop).replace("+", "")} THB`, "the deepest the total fell from its best point; less than this in the account and a bad run would stop you")}
+      ${row("❌", "Rounds that lose all orders", m.fullLossEvery, `each costs ${money(m.worstRound)} THB`)}
+      ${row("🔁", "Most rounds open at the same time", `${m.mostAtOnce}`, "across all assets; this much money can be tied up at once")}
+    </div>`;
+  }
+  render();
+})();
+</script>
+</body>
+</html>

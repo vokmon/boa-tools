@@ -11,7 +11,7 @@ export interface NumberField {
   integer: boolean;
   min: number;
   max: number;
-  /** Values worth trying, for the AI brief and the search. */
+  /** Values worth trying, for the AI brief. */
   tryRange: [number, number];
   /** Where the value goes in the signal settings; absent for martingale / order fields. */
   signal?: (keyof SignalSettings)[];

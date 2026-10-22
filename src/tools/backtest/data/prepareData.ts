@@ -7,16 +7,16 @@ import { buildPeriod } from "@/lib/date";
 import { compactNumber, shortDay, type Bar, type Progress, type Task } from "@/lib/progress";
 import { CandleSync, type SyncSummary } from "./CandleSync";
 
-const DAY_MS = 86_400_000;
-
 /** yyyy-mm-dd -> dd/mm/yyyy */
 const toDmy = (key: string) => key.split("-").reverse().join("/");
 
 /**
  * Gets the data ready before every backtest:
- * 1. fills missing days in Turso from the broker (everything it still has, up to yesterday;
- *    complete asset-days are skipped, so this is quick unless something was missed),
- * 2. copies new or changed complete days from Turso into the local cache.
+ * 1. brings Turso up to date from IQ Option: every day the broker still has, up to now (today's
+ *    candles so far included); complete asset-days are skipped, so only today and anything missed
+ *    are fetched,
+ * 2. copies new or changed complete days from Turso into the local cache (the backtest uses
+ *    complete days only).
  */
 export async function prepareData(input: {
   iqEnv: IqOptionEnv;
@@ -28,16 +28,17 @@ export async function prepareData(input: {
   progress: Progress;
 }): Promise<{ collect: CollectSummary; sync: SyncSummary }> {
   const { db, cache, size, now, progress } = input;
-  const yesterday = new Date(now.getTime() - DAY_MS).toISOString().slice(0, 10);
-  const days = buildPeriod(toDmy(firstFullDay(now, size)), toDmy(yesterday), "UTC").days.map((d) => d.key);
+  const today = now.toISOString().slice(0, 10);
+  const days = buildPeriod(toDmy(firstFullDay(now, size)), toDmy(today), "UTC").days.map((d) => d.key);
 
   progress.step("Data");
 
-  const missing = progress.task("🔍", "Missing candles");
-  const { summary: collect } = await collectFromBroker({ iqEnv: input.iqEnv, db, days, size, force: false, now, report: collectReport(missing, days.length) });
-  if (collect.fetched === 0 && collect.failed.length === 0) missing.done("Nothing missing");
-  else if (collect.failed.length === 0) missing.done(`Filled ${collect.fetched.toLocaleString("en-US")} asset-days · ${compactNumber(collect.candles)} candles`);
-  else missing.fail(`${collect.failed.length} asset-days failed (left out of this run)`);
+  const turso = progress.task("☁️ ", "Turso, from IQ Option");
+  const { summary: collect } = await collectFromBroker({ iqEnv: input.iqEnv, db, days, size, force: false, now, report: collectReport(turso, days.length) });
+  const upTo = `up to date to ${bangkokTime(now)} (Bangkok)`;
+  if (collect.failed.length) turso.fail(`${collect.failed.length} asset-days failed, retried next run; otherwise ${upTo}`);
+  // Candles already stored are kept as they are, so "fetched" includes today's earlier minutes
+  else turso.done(`${upTo} · ${compactNumber(collect.candles)} candles fetched`);
 
   const local = progress.task("🔄", "Local copy");
   let bar: Bar | undefined;
@@ -55,6 +56,12 @@ export async function prepareData(input: {
   return { collect, sync };
 }
 
+/** "22/10 14:58" in Bangkok time (UTC+7, no daylight saving). */
+function bangkokTime(now: Date): string {
+  const t = new Date(now.getTime() + 7 * 3_600_000).toISOString();
+  return `${t.slice(8, 10)}/${t.slice(5, 7)} ${t.slice(11, 16)}`;
+}
+
 /** Collector progress as task details: login, asset list, a bar over the days, failures. */
 function collectReport(task: Task, totalDays: number): CollectReport {
   let bar: Bar | undefined;
@@ -65,7 +72,8 @@ function collectReport(task: Task, totalDays: number): CollectReport {
       bar = task.bar(totalDays, "days");
     },
     day: (r) => {
-      if (r.fetched > 0) task.info("➕", `${shortDay(r.day)}: filled ${r.fetched} assets · ${compactNumber(r.candles)} candles`);
+      // Today is fetched on every run; only report it, and older days, when something was added
+      if (r.fetched > 0 && r.candles > 0) task.info(r.status === "partial" ? "🕐" : "➕", `${shortDay(r.day)}${r.status === "partial" ? " (so far)" : ""}: ${r.fetched} assets · ${compactNumber(r.candles)} candles`);
       bar?.update();
     },
     failed: (day, asset, message) => task.warn(`${shortDay(day)} ${asset}: ${message}`),

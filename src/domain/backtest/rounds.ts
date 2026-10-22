@@ -39,6 +39,18 @@ export interface Round {
   profit: number;
 }
 
+/** Prices the simulator reads, as arrays (SignalEngine has them), so candle objects need not stay in memory. */
+export interface PriceSeries {
+  readonly length: number;
+  readonly from: ArrayLike<number>;
+  readonly opens: ArrayLike<number>;
+  readonly closes: ArrayLike<number>;
+}
+
+export function priceSeries(candles: readonly Candle[]): PriceSeries {
+  return { length: candles.length, from: candles.map((c) => c.from), opens: candles.map((c) => c.open), closes: candles.map((c) => c.close) };
+}
+
 export interface SimulateOptions {
   size: number;
   martingale: MartingaleSettings;
@@ -56,17 +68,18 @@ export interface SimulateOptions {
  * stake) if it closes where it opened. An asset never takes a signal on a candle it already had an
  * order on, so rounds of one asset never overlap.
  */
-export function simulateRounds(activeId: number, candles: readonly Candle[], signals: Int8Array, options: SimulateOptions): Round[] {
+export function simulateRounds(activeId: number, prices: PriceSeries, signals: Int8Array, options: SimulateOptions): Round[] {
   const { size, martingale, order } = options;
+  const { from, opens, closes } = prices;
   const rounds: Round[] = [];
   let busyUntil = -1;
-  for (let i = 0; i < candles.length - 1; i++) {
+  for (let i = 0; i < prices.length - 1; i++) {
     const direction = signals[i]!;
     if (direction === 0 || i <= busyUntil) continue;
     let j = i + 1;
     // The order candle must follow right away; across a gap the bot has no instrument to buy
-    if (candles[j]!.from - candles[i]!.from !== size) continue;
-    const start = candles[j]!.from;
+    if (from[j]! - from[i]! !== size) continue;
+    const start = from[j]!;
     if (options.from !== undefined && start < options.from) continue;
     if (options.to !== undefined && start >= options.to) continue;
     if (options.hours && !options.hours[bangkokHour(start)]) continue;
@@ -79,10 +92,9 @@ export function simulateRounds(activeId: number, candles: readonly Candle[], sig
     let orders = 0;
     let wonAt: number;
     for (;;) {
-      const candle = candles[j]!;
       orders++;
       staked += stake;
-      const move = direction * (candle.close - candle.open);
+      const move = direction * (closes[j]! - opens[j]!);
       if (move > 0) {
         profit += (stake * order.payout) / 100;
         wonAt = level;
@@ -99,14 +111,14 @@ export function simulateRounds(activeId: number, candles: readonly Candle[], sig
         stake = nextStake(stake, lossSoFar, martingale, order);
       }
       // A draw repeats the same order on the next candle
-      if (j + 1 >= candles.length || candles[j + 1]!.from - candle.from !== size) {
+      if (j + 1 >= prices.length || from[j + 1]! - from[j]! !== size) {
         wonAt = STOPPED;
         break;
       }
       j++;
     }
     busyUntil = j;
-    rounds.push({ activeId, direction, start, end: candles[j]!.from + size, wonAt, orders, staked, profit });
+    rounds.push({ activeId, direction, start, end: from[j]! + size, wonAt, orders, staked, profit });
   }
   return rounds;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Candle } from "@/domain/signal";
 import { DEFAULT_MARTINGALE, DEFAULT_ORDER, nextStake, worstCaseStake } from "@/domain/backtest/martingale";
-import { LOST, STOPPED, bangkokDay, bangkokHour, simulateRounds } from "@/domain/backtest/rounds";
+import { LOST, STOPPED, bangkokDay, bangkokHour, priceSeries, simulateRounds } from "@/domain/backtest/rounds";
 import { hourRanges, summarize, type HourStat } from "@/domain/backtest/summary";
 
 const T0 = Date.parse("2026-10-20T03:00:00Z") / 1000; // 10:00 Bangkok
@@ -31,47 +31,47 @@ function signalsAt(length: number, at: Record<number, number>): Int8Array {
 describe("simulateRounds", () => {
   test("win on the first order: no martingale", () => {
     const c = candles("xu");
-    const [round] = simulateRounds(1, c, signalsAt(2, { 0: 1 }), options);
+    const [round] = simulateRounds(1, priceSeries(c), signalsAt(2, { 0: 1 }), options);
     expect(round).toMatchObject({ wonAt: 0, orders: 1, staked: 10, profit: 8.5, start: c[1]!.from, end: c[1]!.from + 60 });
   });
 
   test("losses step up the stake until a win (CALL, 2.5x)", () => {
-    const [round] = simulateRounds(1, candles("xddu"), signalsAt(4, { 0: 1 }), options);
+    const [round] = simulateRounds(1, priceSeries(candles("xddu")), signalsAt(4, { 0: 1 }), options);
     // stakes 10, 25, 62.5: lose 35, win 53.125
     expect(round).toMatchObject({ wonAt: 2, orders: 3, staked: 97.5, profit: 62.5 * 0.85 - 35 });
   });
 
   test("a PUT wins when the candle closes down", () => {
-    const [round] = simulateRounds(1, candles("xd"), signalsAt(2, { 0: -1 }), options);
+    const [round] = simulateRounds(1, priceSeries(candles("xd")), signalsAt(2, { 0: -1 }), options);
     expect(round!.wonAt).toBe(0);
   });
 
   test("all 5 orders lose: the round is lost", () => {
-    const [round] = simulateRounds(1, candles("xddddd"), signalsAt(6, { 0: 1 }), options);
+    const [round] = simulateRounds(1, priceSeries(candles("xddddd")), signalsAt(6, { 0: 1 }), options);
     expect(round).toMatchObject({ wonAt: LOST, orders: 5, staked: worstCaseStake(DEFAULT_MARTINGALE, DEFAULT_ORDER) });
     expect(round!.profit).toBeCloseTo(-(10 + 25 + 62.5 + 156.25 + 390.625));
   });
 
   test("a draw repeats the same order", () => {
-    const [round] = simulateRounds(1, candles("xd=u"), signalsAt(4, { 0: 1 }), options);
+    const [round] = simulateRounds(1, priceSeries(candles("xd=u")), signalsAt(4, { 0: 1 }), options);
     expect(round).toMatchObject({ wonAt: 1, orders: 3, staked: 10 + 25 + 25 });
   });
 
   test("a market gap stops the round; no round when the next candle is missing", () => {
-    const [stopped] = simulateRounds(1, candles("xd|u"), signalsAt(3, { 0: 1 }), options);
+    const [stopped] = simulateRounds(1, priceSeries(candles("xd|u")), signalsAt(3, { 0: 1 }), options);
     expect(stopped!.wonAt).toBe(STOPPED);
-    expect(simulateRounds(1, candles("x|u"), signalsAt(2, { 0: 1 }), options)).toEqual([]);
+    expect(simulateRounds(1, priceSeries(candles("x|u")), signalsAt(2, { 0: 1 }), options)).toEqual([]);
   });
 
   test("no new signal on a candle the asset already traded", () => {
     // Round from signal 0 trades candles 1-2; signals at 1 and 2 are skipped, 3 starts a new round
-    const rounds = simulateRounds(1, candles("xdudu"), signalsAt(5, { 0: 1, 1: 1, 2: -1, 3: 1 }), options);
+    const rounds = simulateRounds(1, priceSeries(candles("xdudu")), signalsAt(5, { 0: 1, 1: 1, 2: -1, 3: 1 }), options);
     expect(rounds.map((r) => r.start)).toEqual([T0 + 60, T0 + 240]);
   });
 
   test("hours filter uses the Bangkok hour of the first order", () => {
     const allowed = Array.from({ length: 24 }, (_, h) => h === 11);
-    expect(simulateRounds(1, candles("xu"), signalsAt(2, { 0: 1 }), { ...options, hours: allowed })).toEqual([]);
+    expect(simulateRounds(1, priceSeries(candles("xu")), signalsAt(2, { 0: 1 }), { ...options, hours: allowed })).toEqual([]);
     expect(bangkokHour(T0)).toBe(10);
     expect(bangkokDay(Date.parse("2026-10-20T17:30:00Z") / 1000)).toBe("2026-10-21");
   });
@@ -79,7 +79,7 @@ describe("simulateRounds", () => {
   test("recovery martingale wins back the losses plus a normal win", () => {
     const recovery = { ...DEFAULT_MARTINGALE, type: "recovery" as const };
     expect(nextStake(10, 10, recovery, DEFAULT_ORDER)).toBe(21.77);
-    const [round] = simulateRounds(1, candles("xdu"), signalsAt(3, { 0: 1 }), { ...options, martingale: recovery });
+    const [round] = simulateRounds(1, priceSeries(candles("xdu")), signalsAt(3, { 0: 1 }), { ...options, martingale: recovery });
     expect(round!.profit).toBeCloseTo(21.77 * 0.85 - 10);
   });
 });

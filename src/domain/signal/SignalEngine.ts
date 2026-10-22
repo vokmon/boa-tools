@@ -4,16 +4,24 @@ import { bollinger, consecutiveColours, resistanceLevels, rollingMax, rollingMin
 
 /** iq-robot returns HOLD when it has fewer candles than this. */
 const MIN_CANDLES = 20;
+/**
+ * Indicator arrays kept per engine. Trying many settings uses many periods; beyond this the oldest
+ * is dropped and recomputed if needed again, so memory stays bounded (each array is 8 bytes per candle).
+ */
+const MAX_CACHED_INDICATORS = 8;
 
 /**
  * The bot's signal for every candle of one asset's history, as if that candle had just closed and
  * the bot looked at the `windowSize` candles ending with it. Indicators are computed once per
  * series and cached by their parameters, so trying many settings only recomputes what changed.
+ * Prices are kept in typed arrays; the candle objects are not held on to.
  */
 export class SignalEngine {
   readonly length: number;
-  private readonly opens: Float64Array;
-  private readonly closes: Float64Array;
+  /** Candle start times (unix seconds), opens and closes, for simulating orders. */
+  readonly from: Float64Array;
+  readonly opens: Float64Array;
+  readonly closes: Float64Array;
   private readonly highs: Float64Array;
   private readonly lows: Float64Array;
   private readonly bodies: Float64Array;
@@ -29,6 +37,7 @@ export class SignalEngine {
   constructor(candles: readonly Candle[], size: number) {
     const n = candles.length;
     this.length = n;
+    this.from = Float64Array.from(candles, (c) => c.from);
     this.opens = Float64Array.from(candles, (c) => c.open);
     this.closes = Float64Array.from(candles, (c) => c.close);
     this.highs = Float64Array.from(candles, (c) => c.max);
@@ -36,119 +45,100 @@ export class SignalEngine {
     this.bodies = Float64Array.from(candles, (c) => Math.abs(c.close - c.open));
     this.contiguous = new Int32Array(n);
     for (let i = 0; i < n; i++) {
-      this.contiguous[i] = i > 0 && candles[i]!.from - candles[i - 1]!.from === size ? this.contiguous[i - 1]! + 1 : 1;
+      this.contiguous[i] = i > 0 && this.from[i]! - this.from[i - 1]! === size ? this.contiguous[i - 1]! + 1 : 1;
     }
   }
 
   /** CALL (1), PUT (-1) or nothing (0) for every candle. Candles without a full gap-free window get 0. */
-  signals(settings: SignalSettings = DEFAULT_SIGNAL_SETTINGS): Int8Array {
+  signals(s: SignalSettings = DEFAULT_SIGNAL_SETTINGS): Int8Array {
     const out = new Int8Array(this.length);
-    for (let i = settings.windowSize - 1; i < this.length; i++) {
-      if (this.contiguous[i]! >= settings.windowSize) out[i] = this.signalAt(i, settings);
+    const w = s.windowSize;
+    // iq-robot returns HOLD when an indicator has no value at the window's last candle
+    if (w < MIN_CANDLES || w < s.bollingerPeriod || w < s.stochasticKPeriod + s.stochasticDPeriod - 1 || w < s.donchianPeriod) return out;
+    // Breakout compares with the previous candle's channel, which must also be inside the window
+    const hasPreviousChannel = w - 2 >= s.donchianPeriod - 1;
+
+    // Every indicator looked up once per call, not per candle
+    const res = this.resistance(s.supportResistancePeriod);
+    const sup = this.support(s.supportResistancePeriod);
+    const channelHigh = this.cached(`dch:${s.donchianPeriod}`, () => rollingMax(this.highs, s.donchianPeriod));
+    const channelLow = this.cached(`dcl:${s.donchianPeriod}`, () => rollingMin(this.lows, s.donchianPeriod));
+    const bands = this.cached(`bb:${s.bollingerPeriod}:${s.bollingerStdDev}`, (): Bands => bollinger(this.closes, s.bollingerPeriod, s.bollingerStdDev));
+    const stoch = this.cached(`st:${s.stochasticKPeriod}:${s.stochasticDPeriod}:${s.stochasticSmoothing}`, (): Stochastic =>
+      stochastic(this.highs, this.lows, this.closes, s.stochasticKPeriod, s.stochasticDPeriod, s.stochasticSmoothing),
+    );
+    const runs = this.cached("colours", () => consecutiveColours(this.opens, this.closes));
+
+    // Every rule must hold, so they are checked cheapest and most selective first; the result is
+    // the same as checking them in iq-robot's order
+    for (let e = w - 1; e < this.length; e++) {
+      if (this.contiguous[e]! < w) continue;
+      const k = stoch.k[e]!;
+      const d = stoch.d[e]!;
+      const overbought = k > s.stochasticKOverbought && d > s.stochasticDOverbought;
+      const oversold = k < s.stochasticKOversold && d < s.stochasticDOversold;
+      if (!overbought && !oversold) continue;
+
+      const start = e - w + 1;
+      // Support / resistance: iq-robot only finds levels inside its window, and the first box
+      // there ends at window index period - 1; without both levels it returns HOLD
+      const firstBox = start + s.supportResistancePeriod - 1;
+      if (res.index[e]! < firstBox || sup.index[e]! < firstBox) continue;
+
+      const high = this.highs[e]!;
+      const low = this.lows[e]!;
+      // iq-robot counts the run from the start of its window
+      const run = runs[e]!;
+      const inRow = Math.sign(run) * Math.min(Math.abs(run), w);
+
+      let put = false;
+      if (overbought && high > bands.upper[e]! && hasPreviousChannel && high > channelHigh[e - 1]! && inRow >= s.consecutiveCandles) {
+        const mid = (res.value[e]! + sup.value[e]!) / 2;
+        const upperZone = res.value[e]! - mid;
+        put = upperZone > 0 && (high - mid) / upperZone >= s.zonePositionThreshold && this.shapeOk(e, start, s, true) && this.sizeOk(e, start, s);
+      }
+      if (put) {
+        out[e] = PUT;
+        continue;
+      }
+      if (oversold && low < bands.lower[e]! && hasPreviousChannel && low < channelLow[e - 1]! && inRow <= -s.consecutiveCandles) {
+        const mid = (res.value[e]! + sup.value[e]!) / 2;
+        const lowerZone = mid - sup.value[e]!;
+        if (lowerZone > 0 && (mid - low) / lowerZone >= s.zonePositionThreshold && this.shapeOk(e, start, s, false) && this.sizeOk(e, start, s)) out[e] = CALL;
+      }
     }
     return out;
   }
 
-  /** The signal at index `e`, with the window [e - windowSize + 1, e]. */
-  private signalAt(e: number, s: SignalSettings): number {
-    const w = s.windowSize;
-    const start = e - w + 1;
-    if (w < MIN_CANDLES) return NO_SIGNAL;
-
-    // Support / resistance: iq-robot only finds levels inside its window, and the first box
-    // there ends at window index period - 1
-    const firstBox = start + s.supportResistancePeriod - 1;
-    const res = this.resistance(s.supportResistancePeriod);
-    const sup = this.support(s.supportResistancePeriod);
-    if (res.index[e]! < firstBox || sup.index[e]! < firstBox) return NO_SIGNAL;
-    const resistance = res.value[e]!;
-    const support = sup.value[e]!;
-
-    // iq-robot returns HOLD when an indicator has no value at the last candle
-    if (e - start < s.bollingerPeriod - 1) return NO_SIGNAL;
-    if (e - start < s.stochasticKPeriod - 1 + s.stochasticDPeriod - 1) return NO_SIGNAL;
-    if (e - start < s.donchianPeriod - 1) return NO_SIGNAL;
-
-    const high = this.highs[e]!;
-    const low = this.lows[e]!;
-    const mid = (resistance + support) / 2;
-    const upperZone = resistance - mid;
-    const lowerZone = mid - support;
-    const nearResistance = upperZone > 0 && (high - mid) / upperZone >= s.zonePositionThreshold;
-    const nearSupport = lowerZone > 0 && (mid - low) / lowerZone >= s.zonePositionThreshold;
-
-    // Breakout against the previous candle's channel, which must also be inside the window
-    const hasPreviousChannel = e - 1 - start >= s.donchianPeriod - 1;
-    const channelHigh = this.cached(`dch:${s.donchianPeriod}`, () => rollingMax(this.highs, s.donchianPeriod));
-    const channelLow = this.cached(`dcl:${s.donchianPeriod}`, () => rollingMin(this.lows, s.donchianPeriod));
-    const upperBreakout = hasPreviousChannel && high > channelHigh[e - 1]!;
-    const lowerBreakout = hasPreviousChannel && low < channelLow[e - 1]!;
-
-    const bands = this.cached(`bb:${s.bollingerPeriod}:${s.bollingerStdDev}`, (): Bands => bollinger(this.closes, s.bollingerPeriod, s.bollingerStdDev));
-    const aboveBand = high > bands.upper[e]!;
-    const belowBand = low < bands.lower[e]!;
-
-    const stoch = this.cached(`st:${s.stochasticKPeriod}:${s.stochasticDPeriod}:${s.stochasticSmoothing}`, (): Stochastic =>
-      stochastic(this.highs, this.lows, this.closes, s.stochasticKPeriod, s.stochasticDPeriod, s.stochasticSmoothing),
-    );
-    const k = stoch.k[e]!;
-    const d = stoch.d[e]!;
-    const overbought = k > s.stochasticKOverbought && d > s.stochasticDOverbought;
-    const oversold = k < s.stochasticKOversold && d < s.stochasticDOversold;
-
-    // iq-robot counts the run from the start of its window
-    const run = this.cached("colours", () => consecutiveColours(this.opens, this.closes))[e]!;
-    const inRow = Math.sign(run) * Math.min(Math.abs(run), e - start + 1);
-
-    const shape = this.candleShape(e, start, s);
-    const sizeOk = this.sizeOk(e, start, s);
-
-    const put =
-      nearResistance && upperBreakout && aboveBand && overbought && inRow >= s.consecutiveCandles && shape.putOk && sizeOk;
-    if (put) return PUT;
-    const call =
-      nearSupport && lowerBreakout && belowBand && oversold && inRow <= -s.consecutiveCandles && shape.callOk && sizeOk;
-    return call ? CALL : NO_SIGNAL;
-  }
-
-  /** Body and wick rules on the signal candle and on the latest `candlesToCheckBodyAndWicks`. */
-  private candleShape(e: number, start: number, s: SignalSettings): { putOk: boolean; callOk: boolean } {
-    const last = this.metrics(e, s);
+  /**
+   * Body and wick rules: the signal candle and the `candlesToCheckBodyAndWicks` latest all have a
+   * valid body, the signal candle's rejection wick (upper for PUT, lower for CALL) is small, and it
+   * is no bigger than the earlier checked candles' wicks.
+   */
+  private shapeOk(e: number, start: number, s: SignalSettings, isPut: boolean): boolean {
     const n = s.candlesToCheckBodyAndWicks;
-    if (e - start + 1 < n) return { putOk: false, callOk: false };
-    let allValid = true;
-    let smallestUpper = true;
-    let smallestLower = true;
+    if (e - start + 1 < n) return false;
+    const lastWick = this.wickRatio(e, isPut);
+    if (!(this.bodyRatio(e) >= s.minBodyRatio) || !(lastWick < s.maxRejectionWickRatio)) return false;
     for (let i = e - n + 1; i <= e; i++) {
-      const m = this.metrics(i, s);
-      if (!m.validBody) allValid = false;
-      if (i < e) {
-        if (!(last.upperWickRatio <= m.upperWickRatio)) smallestUpper = false;
-        if (!(last.lowerWickRatio <= m.lowerWickRatio)) smallestLower = false;
-      }
+      if (!(this.bodyRatio(i) >= s.minBodyRatio)) return false;
+      if (i < e && !(lastWick <= this.wickRatio(i, isPut))) return false;
     }
-    return {
-      putOk: last.validBody && last.smallUpperWick && allValid && smallestUpper,
-      callOk: last.validBody && last.smallLowerWick && allValid && smallestLower,
-    };
+    return true;
   }
 
-  private metrics(i: number, s: SignalSettings) {
-    const high = this.highs[i]!;
-    const low = this.lows[i]!;
+  private bodyRatio(i: number): number {
+    const range = this.highs[i]! - this.lows[i]!;
+    return range > 0 ? this.bodies[i]! / range : 0;
+  }
+
+  /** Upper wick (PUT) or lower wick (CALL) as a share of the candle's range. */
+  private wickRatio(i: number, upper: boolean): number {
+    const range = this.highs[i]! - this.lows[i]!;
+    if (!(range > 0)) return 0;
     const open = this.opens[i]!;
     const close = this.closes[i]!;
-    const range = high - low;
-    const bodyRatio = range > 0 ? this.bodies[i]! / range : 0;
-    const upperWickRatio = range > 0 ? (high - Math.max(open, close)) / range : 0;
-    const lowerWickRatio = range > 0 ? (Math.min(open, close) - low) / range : 0;
-    return {
-      validBody: bodyRatio >= s.minBodyRatio,
-      upperWickRatio,
-      lowerWickRatio,
-      smallUpperWick: upperWickRatio < s.maxRejectionWickRatio,
-      smallLowerWick: lowerWickRatio < s.maxRejectionWickRatio,
-    };
+    return upper ? (this.highs[i]! - Math.max(open, close)) / range : (Math.min(open, close) - this.lows[i]!) / range;
   }
 
   /** The latest `candlesToCheckSize` bodies are each at least `minCandleSizeRatio` of the average before them. */
@@ -179,6 +169,7 @@ export class SignalEngine {
     let value = this.cache.get(key) as T | undefined;
     if (value === undefined) {
       value = compute();
+      if (this.cache.size >= MAX_CACHED_INDICATORS) this.cache.delete(this.cache.keys().next().value!);
       this.cache.set(key, value);
     }
     return value;

@@ -52,6 +52,7 @@ export async function writeResultFiles(dir: string, run: BacktestResult): Promis
     { header: "most_at_once", value: (r) => r.summary.mostAtOnce },
     { header: "last_2_weeks_round_win_pct", value: (r) => r.summary.check.last.roundWinPct.toFixed(2) },
     { header: "last_2_weeks_held_up", value: (r) => (r.summary.check.heldUp ? "yes" : "no") },
+    ...rows[0]!.levels.map((l, i) => ({ header: `profit_per_day_levels_${l.levels}`, value: (r: SettingResult) => r.levels[i]!.summary.profitPerDay.toFixed(0) })),
     { header: "good_hours", value: (r) => r.summary.goodHours.join(" ") },
     { header: "avoid_hours", value: (r) => r.summary.avoidHours.join(" ") },
   ]);

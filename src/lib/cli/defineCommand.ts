@@ -39,9 +39,20 @@ export interface CommandDefinition<D extends OptionDefinitions> {
   /** Example invocations shown under Usage. */
   examples?: string[];
   options: D;
+  /** Settings the command reads from .env, listed under "Environment" in the help. */
+  env?: EnvVar[];
   /** Extra text at the end of the help, e.g. notes or caveats. */
   notes?: string;
   run: (values: OptionValues<D>) => Promise<void>;
+}
+
+export interface EnvVar {
+  name: string;
+  description: string;
+  /** Shown as "(default …)"; without it the variable is required. */
+  default?: string;
+  /** Optional with no default (e.g. only needed by some runs). */
+  optional?: boolean;
 }
 
 /** Options every command gets for free. */
@@ -65,6 +76,12 @@ export function formatHelp<D extends OptionDefinitions>(command: Omit<CommandDef
     return `${flag.padEnd(width)}${option.description}${fallback}`;
   });
 
+  const envWidth = Math.max(0, ...(command.env ?? []).map((v) => v.name.length)) + 5;
+  const envLines = (command.env ?? []).map((v) => {
+    const need = v.default !== undefined ? `(default ${v.default})` : v.optional ? "(optional)" : "(required)";
+    return `  ${v.name.padEnd(envWidth - 2)}${v.description} ${need}`;
+  });
+
   const examples = command.examples?.length ? command.examples : [`bun run ${command.name} [options]`];
   return [
     command.description.trim(),
@@ -74,6 +91,7 @@ export function formatHelp<D extends OptionDefinitions>(command: Omit<CommandDef
     "",
     "Options:",
     ...optionLines,
+    ...(envLines.length ? ["", "Environment (.env):", ...envLines] : []),
     ...(command.notes ? ["", command.notes.trim()] : []),
   ].join("\n");
 }
