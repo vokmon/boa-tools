@@ -6,12 +6,14 @@ import { CandleDb } from "@/storage/CandleDb";
 import { LocalCandleCache } from "@/storage/LocalCandleCache";
 import { chooseMany, defineCommand, isInteractive, UsageError } from "@/lib/cli";
 import { Progress } from "@/lib/progress";
-import { prepareData } from "./data/prepareData";
+import { prepareData, useLocalCopy } from "./data/prepareData";
 import { runBacktest } from "./runBacktest";
 import { loadSettingsFolder, SettingsError, type RunSetting } from "./settings/settingsFile";
 import { resultLines } from "./output/terminal";
 import { writeResultFiles } from "./output/writeFiles";
 import { writeReport } from "./report/renderReport";
+import { reversalEvidence } from "./evidence/reversalEvidence";
+import { evidenceLines, writeEvidenceFiles } from "./evidence/evidenceOutput";
 
 const SIZE = 60;
 const ALL = "__all__";
@@ -25,56 +27,66 @@ hours to trade.`,
   examples: [
     "bun run backtest                          pick settings files from a list",
     "bun run backtest --all                    every settings file",
-    "bun run backtest --settings bot-current,stochastic-90",
-    "bun run backtest --all --html             also write report.html and open it",
+    "bun run backtest --settings bot-current,my-idea",
+    "bun run backtest --all --local            use the local copy as it is, without Turso or IQ Option",
+    "bun run backtest --evidence --local       how often the next candle reverses after each piece of evidence",
   ],
   options: {
     all: { type: "boolean", description: "run every settings file without asking", default: false },
     settings: { type: "string", placeholder: "names", description: "settings files to run, comma separated (without .json)" },
-    html: { type: "boolean", description: "also write report.html (one self-contained page) and open it", default: false },
+    local: { type: "boolean", description: "skip updating Turso and the local copy; use the local copy as it is", default: false },
+    evidence: { type: "boolean", description: "instead of settings: measure how often the next candle reverses after each piece of reversal evidence", default: false },
   },
   env: [
-    { name: "IQ_OPTION_USER", description: "IQ Option login, to fetch candles" },
+    { name: "IQ_OPTION_USER", description: "IQ Option login, to fetch candles (not needed with --local)" },
     { name: "IQ_OPTION_PASSWORD", description: "IQ Option password" },
-    { name: "TURSO_DATABASE_URL", description: "Turso database with the candles, libsql://…turso.io" },
+    { name: "TURSO_DATABASE_URL", description: "Turso database with the candles, libsql://…turso.io (not needed with --local)" },
     { name: "TURSO_AUTH_TOKEN", description: "Turso token with read and write access" },
     { name: "BACKTEST_SETTINGS_DIR", description: "folder with settings files (*.json)", default: "backtest/settings" },
     { name: "BACKTEST_RESULTS_DIR", description: "folder for results, one subfolder per run", default: "<DATA_DIR>/backtest" },
     { name: "DATA_DIR", description: "folder for the local candles copy", default: "data" },
   ],
   notes: `
-Every run first:
+Every run first (unless --local):
   1. brings Turso up to date from IQ Option (every day the broker still has, up to now)
   2. copies new finished days into the local copy (<DATA_DIR>/candles.sqlite)
 then plays each setting at max martingale 0 to 4 on all finished days.
 
 Each run writes to <BACKTEST_RESULTS_DIR>/<date_time>/:
-  results.json, results.csv, ai-brief.md (paste into an AI for the next settings to try),
-  settings/ (every setting as a settings file), report.html (with --html)
+  report.html (open it in a browser), results.json, ai-brief.md (paste into an AI for the next
+  settings to try), settings/ (every setting as a settings file)
+  With --evidence: evidence.md and evidence.json instead
 
-Every setting and number explained: src/tools/backtest/README.md`,
+Every setting and number explained: src/tools/backtest/docs/ (settings.md, results.md)`,
   run: async (values) => {
+    if (values.evidence && (values.all || values.settings !== undefined)) throw new UsageError("--evidence does not use settings files; leave out --all and --settings");
     const settingsDir = backtestSettingsDir();
-    let files: SettingsFiles;
-    try {
-      files = await loadSettingsFolder(settingsDir);
-    } catch (error) {
-      if (error instanceof SettingsError) throw new UsageError(error.message);
-      throw error;
-    }
-    const chosen = await chooseSettings(files, values.all, values.settings);
-    const settings = chosen.flatMap((f) => f.settings);
-
+    let settings: RunSetting[] = [];
     const progress = new Progress();
-    progress.title("Backtest");
-    progress.task("📂", `${settings.length} setting(s) from ${settingsDir}: ${chosen.map((f) => f.file).join(", ")}`);
+    if (values.evidence) {
+      progress.title("Reversal evidence");
+    } else {
+      let files: SettingsFiles;
+      try {
+        files = await loadSettingsFolder(settingsDir);
+      } catch (error) {
+        if (error instanceof SettingsError) throw new UsageError(error.message);
+        throw error;
+      }
+      const chosen = await chooseSettings(files, values.all, values.settings);
+      settings = chosen.flatMap((f) => f.settings);
+      progress.title("Backtest");
+      progress.task("📂", `${settings.length} setting(s) from ${settingsDir}: ${chosen.map((f) => f.file).join(", ")}`);
+    }
 
-    const iqEnv = loadIqOptionEnv();
-    const turso = createTursoClient(loadTursoEnv());
     const cachePath = join(dataDir(), "candles.sqlite");
+    // --local needs neither IQ Option nor Turso, so their .env values are not even read
+    const turso = values.local ? undefined : createTursoClient(loadTursoEnv());
     const cache = new LocalCandleCache(cachePath);
     try {
-      await prepareData({ iqEnv, db: new CandleDb(turso), cache, cachePath, size: SIZE, now: new Date(), progress });
+      if (turso) await prepareData({ iqEnv: loadIqOptionEnv(), db: new CandleDb(turso), cache, cachePath, size: SIZE, now: new Date(), progress });
+      else useLocalCopy({ cache, cachePath, size: SIZE, progress });
+      if (values.evidence) return await runEvidence(cache, progress);
 
       progress.step("Signals & rounds");
       const assets = cache.assets().length;
@@ -89,25 +101,37 @@ Every setting and number explained: src/tools/backtest/README.md`,
       const dir = join(backtestResultsDir(), runFolderName(new Date()));
       const saved = progress.task("💾", "Saving");
       const written = await writeResultFiles(dir, run);
-      const reportPath = values.html ? await writeReport(dir, run) : undefined;
-      saved.done(`${dir}/ (${[...(reportPath ? ["report.html"] : []), ...written].join(", ")})`);
+      const reportPath = await writeReport(dir, run);
+      saved.done(`${dir}/ (${["report.html", ...written].join(", ")})`);
       console.log(`\n${resultLines(run).join("\n")}\n`);
       console.log(`   🤖 Next settings to try: paste ${join(dir, "ai-brief.md")} into an AI, save its files in ${settingsDir}`);
-      if (reportPath) {
-        console.log(`   📊 Report: ${reportPath}\n`);
-        // Open it in the default browser on macOS; elsewhere the path above is enough
-        if (process.platform === "darwin" && isInteractive()) Bun.spawn(["open", reportPath]);
-      } else {
-        console.log(`   📊 Add --html for a report page\n`);
-      }
+      console.log(`   📊 Report: ${reportPath}\n`);
     } finally {
       cache.close();
-      turso.close();
+      turso?.close();
     }
   },
 });
 
 type SettingsFiles = { file: string; settings: RunSetting[] }[];
+
+/** --evidence: every candle as a possible reversal, grouped by each piece of evidence. */
+async function runEvidence(cache: LocalCandleCache, progress: Progress): Promise<void> {
+  progress.step("Reversal evidence");
+  const assets = cache.assets().length;
+  const task = progress.task("🔎", `${assets} assets, every candle`);
+  const bar = task.bar(assets, "assets");
+  const run = reversalEvidence(cache, SIZE, () => bar.update());
+  bar.end();
+  task.done(`${run.candles.toLocaleString("en-US")} candles over ${run.period.days.length} days`);
+
+  progress.step("Results");
+  const dir = join(backtestResultsDir(), runFolderName(new Date()));
+  const saved = progress.task("💾", "Saving");
+  const written = await writeEvidenceFiles(dir, run);
+  saved.done(`${dir}/ (${written.join(", ")})`);
+  console.log(`\n${evidenceLines(run).join("\n")}\n`);
+}
 
 /** --all / --settings, or a picker with "All" on top. */
 async function chooseSettings(files: SettingsFiles, all: boolean, names: string | undefined): Promise<SettingsFiles> {

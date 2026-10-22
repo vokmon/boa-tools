@@ -1,7 +1,7 @@
 import type { BacktestResult, SettingResult } from "../runBacktest";
 import { NUMBER_FIELDS } from "../settings/fields";
 import { defaultValues } from "../settings/settingsFile";
-import { changesFromBot, finishedRounds, fullLossEvery, hourList, money, ordered, percent, share } from "./format";
+import { changesFromBot, finishedRounds, fullLossEvery, hourList, inRoundsGoal, money, ordered, percent, share } from "./format";
 
 /**
  * A Markdown brief to paste into an AI assistant: goal, constraints, the settings format, every
@@ -20,15 +20,17 @@ export function aiBrief(run: BacktestResult): string {
     return [
       r.setting.label,
       changesFromBot(r.setting.values).join("; ") || "(the bot's current settings)",
-      s.roundsPerDay.toFixed(0),
+      `${s.roundsPerDay.toFixed(0)}${inRoundsGoal(s.roundsPerDay) ? "" : " (outside the goal)"}`,
+      s.roundsPerHour.toFixed(0),
+      percent(s.firstWinPct, 2),
       percent(s.roundWinPct, 2),
-      Array.from({ length: levels + 1 }, (_, l) => share(s.wonAtLevel[l] ?? 0, finished)).join(" / "),
+      Array.from({ length: levels }, (_, l) => share(s.wonAtLevel[l + 1] ?? 0, finished)).join(" / "),
       share(s.lost, finished),
       money(s.profitPerDay),
       `${s.losingDays}/${s.days}`,
       s.worstDay ? money(s.worstDay.profit) : "-",
       money(s.biggestDrop),
-      `${percent(s.check.before.roundWinPct, 2)} → ${percent(s.check.last.roundWinPct, 2)}, ${money(s.check.before.profitPerDay)} → ${money(s.check.last.profitPerDay)}/day ${s.check.heldUp ? "(held up)" : "(dropped)"}`,
+      `${percent(s.check.before.firstWinPct, 2)} → ${percent(s.check.last.firstWinPct, 2)}, ${money(s.check.before.profitPerDay)} → ${money(s.check.last.profitPerDay)}/day ${s.check.heldUp ? "(held up)" : "(dropped)"}`,
       hourList(s.goodHours),
       hourList(s.avoidHours),
     ];
@@ -47,18 +49,28 @@ export function aiBrief(run: BacktestResult): string {
     "",
     "I want a **compromise** setting that makes money across all assets per day, not one that never loses: losing rounds",
     "are fine when the other rounds cover them. Targets:",
-    "- **800+ rounds a day**, all assets together (the bot trades ~830 today)",
-    "- **first order wins more than the break-even below** (54.1% at 85% payout)",
+    "- **first order wins more than the break-even below** (54.1% at 85% payout): the one number that decides profit",
+    "- **600-1000 rounds a day**, all assets together (about 25-42 an hour; the bot trades ~830 today). About 3 in 4",
+    "  rounds are on OTC assets today; main assets have ~43,000 candles a day, so the goal does not need OTC",
     "- **max martingale 4 or less** (more is too risky)",
+    "- **tested at martingale x2.5 and x2.2**: put `\"multiplier\": [2.5, 2.2]` in every file you suggest",
     "- **still profitable on the newest 2 weeks**",
     "- keep the Donchian, Bollinger and support/resistance periods as they are; tune zone, stochastic level, candle rules, volume",
+    "- if nothing reaches the break-even at 600+ rounds a day, also suggest the best setting at fewer rounds",
+    "",
+    "What we know: OTC prices are made by IQ Option itself (no exchange, no volume) and behave like a coin flip: every test",
+    "reversed 49.7-50.3% on OTC. Main assets lean toward reversing and carry volume: a solid candle with no wick against the",
+    "move reversed 53.4%, a long rejection wick only 49.0%, and a volume spike with the signal 53.9% at 89 rounds a day",
+    "(56.1% in the newest 2 weeks). The edge shrinks as rounds grow (51.9% at ~900 a day). `\"withoutVolume\": \"skip\"`",
+    "trades main assets only. Suggest combinations around volume on main assets that test a reversal idea, not random numbers.",
     "",
     "## How a round works",
     "Signal at a candle's close → order on the next candle (wins if it closes in the signal's direction) → on a loss, the",
     "next level on the next candle in the same direction, stake × multiplier → until a win or the last level loses",
     "(\"lost all\"). A draw repeats the same order. One asset never runs two rounds at once.",
     `At a payout of ${first.order.payout}%, an order must win ${(100 / (1 + first.order.payout / 100)).toFixed(2)}% of the time to break even; martingale`,
-    "does not change that, it only moves the losses into rare \"lost all\" rounds. \"Won at L0\" is that first-order win rate.",
+    "does not change that, it only moves the losses into rare \"lost all\" rounds. \"First-order win\" is that rate; \"won at any level\"",
+    "is about 97% even for a coin flip with 4 levels, so it says nothing about profit.",
     "",
     "## Data",
     `${days.length} days (${days[0]} to ${days.at(-1)}, Bangkok time), ${run.assets} assets (forex, OTC, crypto, stocks),`,
@@ -67,7 +79,7 @@ export function aiBrief(run: BacktestResult): string {
     "## Results so far",
     "",
     table(
-      ["Setting", "Changed from the bot", "Rounds/day", "Round win", `Won at L0 / … / L${levels}`, "Lost all", "Profit/day", "Losing days", "Worst day", "Biggest drop", "Earlier → last 2 weeks", "Good hours", "Avoid hours"],
+      ["Setting", "Changed from the bot", "Rounds/day", "Rounds/hour", "First-order win", "Won at any level", `Won at L1 / … / L${levels}`, "Lost all", "Profit/day", "Losing days", "Worst day", "Biggest drop", "First-order win and profit/day: earlier → last 2 weeks", "Good hours", "Avoid hours"],
       resultRows,
     ),
     "",

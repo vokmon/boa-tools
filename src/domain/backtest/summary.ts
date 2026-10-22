@@ -7,6 +7,13 @@ import { BANGKOK_OFFSET_S, LOST, STOPPED, bangkokHour, type Round } from "./roun
 export const MIN_ROUNDS_PER_HOUR = 100;
 /** Days at the end used for the "last 2 weeks" check. */
 export const CHECK_DAYS = 14;
+/**
+ * Rounds a day, all assets together, that keep the app busy without ordering nonstop: fewer looks
+ * idle, more is an order almost every minute (see the backtest README, "What we are looking for").
+ */
+export const ROUNDS_PER_DAY_GOAL = { min: 600, max: 1000 } as const;
+/** "Quiet stretch" is the wait between new rounds that this share of waits stay under. */
+const QUIET_SHARE = 0.9;
 
 export type HourStatus = "good" | "ok" | "avoid" | "few";
 
@@ -14,6 +21,8 @@ export interface HourStat {
   hour: number;
   rounds: number;
   won: number;
+  /** Rounds won by the first order. */
+  firstWon: number;
   profit: number;
   status: HourStatus;
 }
@@ -22,6 +31,7 @@ export interface PeriodStat {
   days: number;
   rounds: number;
   roundWinPct: number;
+  firstWinPct: number;
   profitPerDay: number;
   profitPerRound: number;
 }
@@ -30,8 +40,17 @@ export interface Summary {
   days: number;
   rounds: number;
   roundsPerDay: number;
+  /** Rounds per hour the setting may trade (all day, or its `hours`). */
+  roundsPerHour: number;
+  /**
+   * Minutes between one new round and the next that 9 in 10 waits stay under, within the hours the
+   * setting trades; null with fewer than two rounds.
+   */
+  quietMinutes: number | null;
   /** Rounds that ended in a win at any level, in percent of rounds that finished. */
   roundWinPct: number;
+  /** Rounds won by the first order (no martingale), in percent of rounds that finished. */
+  firstWinPct: number;
   /** Rounds won at level 0 (no martingale), 1, 2, ... */
   wonAtLevel: number[];
   lost: number;
@@ -58,9 +77,9 @@ export interface Summary {
 
 /**
  * Everything the report shows for one setting. `days` are the Bangkok days of the test; rounds
- * outside them are ignored.
+ * outside them are ignored. `hours` are the Bangkok hours the setting may start rounds in.
  */
-export function summarize(rounds: readonly Round[], days: readonly string[], levels: number): Summary {
+export function summarize(rounds: readonly Round[], days: readonly string[], levels: number, hours?: readonly boolean[]): Summary {
   // Bangkok day of a round by arithmetic (a date string per round is slow over millions of rounds)
   const dayNumber = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86_400_000;
   const index = new Map(days.map((d, i) => [dayNumber(d), i]));
@@ -80,7 +99,8 @@ export function summarize(rounds: readonly Round[], days: readonly string[], lev
   }
   const worst = daily.reduce<{ day: string; profit: number } | null>((w, d) => (w === null || d.profit < w.profit ? { day: d.day, profit: d.profit } : w), null);
 
-  const hours = hourStats(finished, profit / Math.max(1, inPeriod.length));
+  const hourStat = hourStats(finished, profit / Math.max(1, inPeriod.length));
+  const openHours = hours ? hours.filter(Boolean).length : 24;
   const checkSplit = Math.max(0, days.length - CHECK_DAYS);
   const before = periodStat(inPeriod.filter((r) => dayOf(r)! < checkSplit), checkSplit);
   const last = periodStat(inPeriod.filter((r) => dayOf(r)! >= checkSplit), days.length - checkSplit);
@@ -89,7 +109,10 @@ export function summarize(rounds: readonly Round[], days: readonly string[], lev
     days: days.length,
     rounds: inPeriod.length,
     roundsPerDay: inPeriod.length / Math.max(1, days.length),
+    roundsPerHour: inPeriod.length / Math.max(1, days.length * openHours),
+    quietMinutes: quietMinutes(inPeriod, hours),
     roundWinPct: finished.length ? (won / finished.length) * 100 : 0,
+    firstWinPct: finished.length ? ((wonAtLevel[0] ?? 0) / finished.length) * 100 : 0,
     wonAtLevel,
     lost,
     stopped: inPeriod.length - finished.length,
@@ -100,9 +123,9 @@ export function summarize(rounds: readonly Round[], days: readonly string[], lev
     worstDay: worst && worst.profit < 0 ? worst : null,
     biggestDrop: biggestDrop(inPeriod),
     mostAtOnce: mostAtOnce(inPeriod),
-    hours,
-    goodHours: hourRanges(hours, "good"),
-    avoidHours: hourRanges(hours, "avoid"),
+    hours: hourStat,
+    goodHours: hourRanges(hourStat, "good"),
+    avoidHours: hourRanges(hourStat, "avoid"),
     daily,
     // Held up: the last 2 weeks still made money, at least half as much per round as before
     check: { before, last, heldUp: last.profitPerRound > 0 && last.profitPerRound >= before.profitPerRound * 0.5 },
@@ -116,6 +139,7 @@ function periodStat(inDays: readonly Round[], days: number): PeriodStat {
     days,
     rounds: inDays.length,
     roundWinPct: finished.length ? (finished.filter((r) => r.wonAt >= 0).length / finished.length) * 100 : 0,
+    firstWinPct: finished.length ? (finished.filter((r) => r.wonAt === 0).length / finished.length) * 100 : 0,
     profitPerDay: days ? profit / days : 0,
     profitPerRound: inDays.length ? profit / inDays.length : 0,
   };
@@ -126,11 +150,12 @@ function periodStat(inDays: readonly Round[], days: number): PeriodStat {
  * less; avoid: loses money; few: not enough rounds to tell.
  */
 function hourStats(rounds: readonly Round[], averagePerRound: number): HourStat[] {
-  const stats: HourStat[] = Array.from({ length: 24 }, (_, hour) => ({ hour, rounds: 0, won: 0, profit: 0, status: "few" }));
+  const stats: HourStat[] = Array.from({ length: 24 }, (_, hour) => ({ hour, rounds: 0, won: 0, firstWon: 0, profit: 0, status: "few" }));
   for (const r of rounds) {
     const s = stats[bangkokHour(r.start)]!;
     s.rounds++;
     if (r.wonAt >= 0) s.won++;
+    if (r.wonAt === 0) s.firstWon++;
     s.profit += r.profit;
   }
   for (const s of stats) {
@@ -155,6 +180,30 @@ export function hourRanges(hours: readonly HourStat[], status: HourStatus): stri
     }
   }
   return ranges;
+}
+
+/**
+ * The wait between minutes in which new rounds start (any asset), that 9 in 10 waits stay under.
+ * A wait that crosses an hour the setting does not trade is the break, not a quiet stretch.
+ */
+function quietMinutes(rounds: readonly Round[], hours: readonly boolean[] | undefined): number | null {
+  const minutes = [...new Set(rounds.map((r) => Math.floor(r.start / 60)))].sort((a, b) => a - b);
+  const waits: number[] = [];
+  for (let i = 1; i < minutes.length; i++) {
+    const from = minutes[i - 1]!;
+    const to = minutes[i]!;
+    if (hours && !allOpen(from * 60, to * 60, hours)) continue;
+    waits.push(to - from);
+  }
+  if (!waits.length) return null;
+  waits.sort((a, b) => a - b);
+  return waits[Math.min(waits.length - 1, Math.ceil(waits.length * QUIET_SHARE) - 1)]!;
+}
+
+/** Every Bangkok hour from `from` to `to` (unix seconds) is one the setting trades. */
+function allOpen(from: number, to: number, hours: readonly boolean[]): boolean {
+  for (let t = from - (from % 3600); t <= to; t += 3600) if (!hours[bangkokHour(t)]) return false;
+  return true;
 }
 
 /** Running total in the order rounds finish; the deepest fall below an earlier high. */

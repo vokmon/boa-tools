@@ -51,9 +51,20 @@ export async function prepareData(input: {
   });
   bar?.end();
   local.done(sync.copied === 0 ? "Already up to date" : `Copied ${sync.copied.toLocaleString("en-US")} asset-days · ${compactNumber(sync.candles)} candles`);
-  const held = cache.days(size);
-  local.info("💾", `${input.cachePath} · ${cache.assets().length} assets · ${held.length} days (${shortDay(held[0] ?? "")} → ${shortDay(held.at(-1) ?? "")})`);
+  local.info("💾", localCopyLine(cache, input.cachePath, size));
   return { collect, sync };
+}
+
+/** --local: no Turso or IQ Option, the local copy as it is. */
+export function useLocalCopy(input: { cache: LocalCandleCache; cachePath: string; size: number; progress: Progress }): void {
+  input.progress.step("Data");
+  const local = input.progress.task("💾", "Local copy only (--local): Turso and IQ Option are not updated");
+  local.done(localCopyLine(input.cache, input.cachePath, input.size));
+}
+
+function localCopyLine(cache: LocalCandleCache, cachePath: string, size: number): string {
+  const held = cache.days(size);
+  return `${cachePath} · ${cache.assets().length} assets · ${held.length} days (${shortDay(held[0] ?? "")} → ${shortDay(held.at(-1) ?? "")})`;
 }
 
 /** "22/10 14:58" in Bangkok time (UTC+7, no daylight saving). */

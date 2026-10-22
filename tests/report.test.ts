@@ -8,8 +8,8 @@ import { NUMBER_FIELDS } from "@/tools/backtest/settings/fields";
 import { syntheticCache } from "./helpers/syntheticCache";
 
 describe("guide", () => {
-  test("the README repeats every explanation word for word", async () => {
-    const readme = await Bun.file("src/tools/backtest/README.md").text();
+  test("the docs repeat every explanation word for word", async () => {
+    const readme = (await Bun.file("src/tools/backtest/docs/results.md").text()) + (await Bun.file("src/tools/backtest/docs/settings.md").text());
     const texts = [
       ...RESULT_GUIDE.map((g) => g.text),
       ...SETTING_GROUPS.map((g) => g.about),

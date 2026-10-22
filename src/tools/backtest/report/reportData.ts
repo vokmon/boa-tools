@@ -1,9 +1,9 @@
-import { CHECK_DAYS } from "@/domain/backtest/summary";
+import { CHECK_DAYS, ROUNDS_PER_DAY_GOAL } from "@/domain/backtest/summary";
 import type { BacktestResult, LevelResult, SettingResult } from "../runBacktest";
 import { defaultValues } from "../settings/settingsFile";
 import { CHOICE_FIELDS, NUMBER_FIELDS } from "../settings/fields";
 import { roundOutcomes } from "@/domain/backtest/martingale";
-import { breakEvenPct, changesFromBot, fullLossEvery, ordered } from "../output/format";
+import { breakEvenPct, changesFromBot, fullLossEvery, inRoundsGoal, ordered } from "../output/format";
 import { RESULT_GUIDE, SETTING_GROUPS, SETTING_GUIDE } from "./guide";
 
 /** Everything report.html shows, embedded in the page as JSON. */
@@ -16,6 +16,7 @@ export interface ReportData {
   levels: number;
   breakEvenPct: number;
   checkDays: number;
+  roundsGoal: { min: number; max: number };
   settings: ReportSetting[];
   /** Max martingale levels the page can switch between. */
   levelOptions: number[];
@@ -45,6 +46,10 @@ export interface ReportView {
   levels: number;
   summary: {
     roundsPerDay: number;
+    /** Inside the rounds-a-day goal. */
+    roundsInGoal: boolean;
+    roundsPerHour: number;
+    quietMinutes: number | null;
     roundWinPct: number;
     firstOrderWinPct: number;
     /** Share of finished rounds won by the first order, martingale 1..n, then lost, in percent. */
@@ -66,8 +71,8 @@ export interface ReportView {
     worstRound: number;
     goodHours: string[];
     avoidHours: string[];
-    hours: { hour: number; rounds: number; winPct: number; profit: number; status: string }[];
-    check: { heldUp: boolean; beforeWinPct: number; lastWinPct: number; beforePerDay: number; lastPerDay: number };
+    hours: { hour: number; rounds: number; firstWinPct: number; profit: number; status: string }[];
+    check: { heldUp: boolean; beforeFirstWinPct: number; lastFirstWinPct: number; beforePerDay: number; lastPerDay: number };
   };
   bestAssets: { name: string; rounds: number; profit: number }[];
   worstAssets: { name: string; rounds: number; profit: number }[];
@@ -87,6 +92,7 @@ export function reportData(run: BacktestResult): ReportData {
     levels,
     breakEvenPct: breakEvenPct(first.order.payout),
     checkDays: CHECK_DAYS,
+    roundsGoal: { ...ROUNDS_PER_DAY_GOAL },
     settings: rows.map((r) => setting(r, defaults)),
     levelOptions: [...new Set(rows.flatMap((r) => r.levels.map((l) => l.levels)))].sort((a, b) => a - b),
     guide: {
@@ -130,8 +136,11 @@ function view(r: SettingResult, l: LevelResult): ReportView {
     levels: l.levels,
     summary: {
       roundsPerDay: s.roundsPerDay,
+      roundsInGoal: inRoundsGoal(s.roundsPerDay),
+      roundsPerHour: s.roundsPerHour,
+      quietMinutes: s.quietMinutes,
       roundWinPct: s.roundWinPct,
-      firstOrderWinPct: ((s.wonAtLevel[0] ?? 0) / finished) * 100,
+      firstOrderWinPct: s.firstWinPct,
       endShares: [...Array.from({ length: l.levels + 1 }, (_, i) => ((s.wonAtLevel[i] ?? 0) / finished) * 100), (s.lost / finished) * 100],
       endMoney: roundOutcomes({ ...r.setting.martingale, levels: l.levels }, r.setting.order),
       daily: s.daily.map((d) => ({ day: d.day, profit: d.profit })),
@@ -148,8 +157,8 @@ function view(r: SettingResult, l: LevelResult): ReportView {
       worstRound: -l.worstRound,
       goodHours: s.goodHours,
       avoidHours: s.avoidHours,
-      hours: s.hours.map((h) => ({ hour: h.hour, rounds: h.rounds, winPct: h.rounds ? (h.won / h.rounds) * 100 : 0, profit: h.profit, status: h.status })),
-      check: { heldUp: s.check.heldUp, beforeWinPct: s.check.before.roundWinPct, lastWinPct: s.check.last.roundWinPct, beforePerDay: s.check.before.profitPerDay, lastPerDay: s.check.last.profitPerDay },
+      hours: s.hours.map((h) => ({ hour: h.hour, rounds: h.rounds, firstWinPct: h.rounds ? (h.firstWon / h.rounds) * 100 : 0, profit: h.profit, status: h.status })),
+      check: { heldUp: s.check.heldUp, beforeFirstWinPct: s.check.before.firstWinPct, lastFirstWinPct: s.check.last.firstWinPct, beforePerDay: s.check.before.profitPerDay, lastPerDay: s.check.last.profitPerDay },
     },
     bestAssets: l.byAsset.slice(0, 5).map((a) => ({ name: a.name, rounds: a.rounds, profit: a.profit })),
     worstAssets: l.byAsset.slice(-5).reverse().map((a) => ({ name: a.name, rounds: a.rounds, profit: a.profit })),

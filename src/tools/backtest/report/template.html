@@ -159,30 +159,33 @@
       <div class="panel tile"><div class="label">Profit per day</div><div class="value ${sign(top.profitPerDay)}">${money(top.profitPerDay)}</div>
         <div class="sub">${bot && bot !== best ? `bot: ${money(vw(bot).summary.profitPerDay)} at ${levelName(vw(bot).levels)}` : `${money(top.profit)} over ${top.days} days`}</div></div>
       <div class="panel tile"><div class="label">First order wins</div><div class="value ${top.firstOrderWinPct >= data.breakEvenPct ? "good" : "bad"}">${pct(top.firstOrderWinPct)}</div>
-        <div class="sub">needs ${pct(data.breakEvenPct, 2)} to break even</div></div>
+        <div class="sub">needs ${pct(data.breakEvenPct, 2)} to break even · ${top.roundsPerDay.toFixed(0)} rounds a day ${top.roundsInGoal ? "✅" : `⚠️ goal ${data.roundsGoal.min}-${data.roundsGoal.max}`}</div></div>
       <div class="panel tile"><div class="label">Last ${data.checkDays} days</div><div class="value">${top.check.heldUp ? "✅ held up" : "⚠️ dropped"}</div>
-        <div class="sub">${money(top.check.beforePerDay)} → ${money(top.check.lastPerDay)} per day</div></div>
+        <div class="sub">first order ${pct(top.check.beforeFirstWinPct)} → ${pct(top.check.lastFirstWinPct)} · ${money(top.check.beforePerDay)} → ${money(top.check.lastPerDay)} per day</div></div>
     </div>`;
 
     // ① Compare
     const shownLevels = Math.max(...settings.map((s) => vw(s).levels));
     const cols = [
       { name: "Max mart.", guide: "Martingale levels", get: (s) => vw(s).levels, show: (v) => (v === 0 ? "none" : v) },
-      { name: "Rounds per day", get: (s) => vw(s).summary.roundsPerDay, show: (v) => v.toFixed(0) },
-      { name: "Round win", get: (s) => vw(s).summary.roundWinPct, show: (v) => pct(v), best: "max" },
-      // Where rounds won: first order, then each martingale level
-      ...Array.from({ length: shownLevels + 1 }, (_, l) => ({
-        name: l === 0 ? "First order" : `Mart. ${l}`,
+      { name: "Rounds per day", get: (s) => vw(s).summary.roundsPerDay, show: (v, s) => `${vw(s).summary.roundsInGoal ? "✅" : "⚠️"} ${v.toFixed(0)}` },
+      { name: "Per hour", guide: "Rounds per hour", get: (s) => vw(s).summary.roundsPerHour, show: (v) => v.toFixed(0) },
+      { name: "Quiet", guide: "Quiet stretch", get: (s) => vw(s).summary.quietMinutes, show: (v) => (v === null ? "-" : `${v} min`) },
+      { name: "First order", guide: "First-order win", get: (s) => vw(s).summary.firstOrderWinPct, show: (v) => `<span class="${v >= data.breakEvenPct ? "good" : "bad"}">${pct(v)}</span>`, best: "max" },
+      { name: "Any level", guide: "Won at any level", get: (s) => vw(s).summary.roundWinPct, show: (v) => pct(v) },
+      // Where the other rounds were won: each martingale level
+      ...Array.from({ length: shownLevels }, (_, i) => ({
+        name: `Mart. ${i + 1}`,
         guide: "First order, Martingale 1 … 4",
-        get: (s) => vw(s).summary.endShares[l] ?? 0,
-        show: (v, s) => (l < vw(s).summary.endShares.length - 1 ? pct(v, 0) : "-"),
-        best: l === 0 ? "max" : null,
+        get: (s) => vw(s).summary.endShares[i + 1] ?? 0,
+        show: (v, s) => (i + 1 < vw(s).summary.endShares.length - 1 ? pct(v, 0) : "-"),
+        best: null,
       })),
       { name: "Lost all", get: (s) => vw(s).summary.lostPct, show: (v) => pct(v), best: "min" },
       { name: "Profit per day", get: (s) => vw(s).summary.profitPerDay, show: (v) => `<span class="${sign(v)}">${money(v)}</span>`, best: "max" },
       { name: "Losing days", get: (s) => vw(s).summary.losingDays, show: (v, s) => `${v}/${vw(s).summary.days}`, best: "min" },
       { name: "Biggest drop", get: (s) => vw(s).summary.biggestDrop, show: (v) => money(v), best: "max" },
-      { name: "Last 2 weeks", get: (s) => (vw(s).summary.check.heldUp ? 1 : 0), show: (v, s) => `${v ? "✅" : "⚠️"} ${money(vw(s).summary.check.lastPerDay)}/day` },
+      { name: "Last 2 weeks", get: (s) => (vw(s).summary.check.heldUp ? 1 : 0), show: (v, s) => `${v ? "✅" : "⚠️"} ${pct(vw(s).summary.check.lastFirstWinPct)} · ${money(vw(s).summary.check.lastPerDay)}/day` },
       { name: "Best level", guide: "Martingale levels", get: (s) => s.bestLevel, show: (v, s) => `${v === 0 ? "none" : v} <span class="muted small">${money(s.views[String(v)].summary.profitPerDay)}/day</span>` },
     ];
     const bestOf = cols.map((c) => (c.best ? (c.best === "max" ? Math.max : Math.min)(...settings.map(c.get)) : null));
@@ -191,7 +194,7 @@
       ${settings.map((s) => `<tr class="${s === bot ? "today" : ""}"><td>${esc(s.label)}</td>${cols
         .map((c, i) => `<td class="${bestOf[i] !== null && c.get(s) === bestOf[i] && settings.length > 1 ? "best" : ""}">${c.show(c.get(s), s)}</td>`)
         .join("")}</tr>`).join("")}</tbody></table>
-      <p class="note">First order, Mart. 1 … = out of 100 rounds, how many were won by the first order, or by martingale 1, 2, … Best level = the max martingale with the most profit per day for that setting. Green = best in the column.</p></div>`;
+      <p class="note">Rounds per day ✅ = inside the goal of ${data.roundsGoal.min}-${data.roundsGoal.max}. First order = how often the first order wins, green above ${pct(data.breakEvenPct, 2)} (break-even). Any level = rounds won at any martingale level; Mart. 1 … = out of 100 rounds, how many were won by martingale 1, 2, … Best level = the max martingale with the most profit per day for that setting. Green = best in the column.</p></div>`;
 
     // ② One setting at a time
     html += `<h2><span class="n">②</span> One setting at a time <span class="muted small">${showing}</span></h2>
@@ -286,7 +289,7 @@
     const bars = hours.map((x) => {
       const bh = Math.max(1, Math.abs(x.profit) * scale);
       const y = x.profit >= 0 ? mid - bh : mid;
-      return `<rect x="${x.hour * bw + 2}" y="${y}" width="${bw - 4}" height="${bh}" rx="2" fill="${colour[x.status]}"><title>${clock(x.hour)}–${clock(x.hour + 1)} · ${x.rounds} rounds · round win ${pct(x.winPct)} · ${money(x.profit)} THB</title></rect>`;
+      return `<rect x="${x.hour * bw + 2}" y="${y}" width="${bw - 4}" height="${bh}" rx="2" fill="${colour[x.status]}"><title>${clock(x.hour)}–${clock(x.hour + 1)} · ${x.rounds} rounds · first order wins ${pct(x.firstWinPct)} · ${money(x.profit)} THB</title></rect>`;
     });
     const labels = [0, 3, 6, 9, 12, 15, 18, 21].map((hr) => `<text x="${hr * bw + 1}" y="${h - 6}" text-anchor="start">${clock(hr)}</text>`);
     return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Profit by hour"><line x1="0" x2="${w}" y1="${mid}" y2="${mid}" stroke="var(--line)"/>${bars.join("")}${labels.join("")}</svg>
@@ -343,7 +346,7 @@
         ${v.levels === 0 ? "None" : v.levels} <b class="${sign(v.summary.profitPerDay)}">${money(v.summary.profitPerDay)}</b>${v.levels === s.bestLevel ? " ⭐" : ""}</button>`).join("")}</div>`;
   }
 
-  /** The money numbers as five plain statements. */
+  /** The money numbers, and how busy the app is, as plain statements. */
   function moneyBlocks(m) {
     const row = (icon, k, v, s, cls = "") => `<div class="money-row"><div class="icon">${icon}</div><div><div class="k">${k}</div><div class="v ${cls}">${v}</div><div class="s">${s}</div></div></div>`;
     return `<div class="money-grid">
@@ -352,6 +355,7 @@
       ${row("🏦", "Balance to keep", `${money(-m.biggestDrop).replace("+", "")} THB`, "the deepest the total fell from its best point; less than this in the account and a bad run would stop you")}
       ${row("❌", "Rounds that lose all orders", m.fullLossEvery, `each costs ${money(m.worstRound)} THB`)}
       ${row("🔁", "Most rounds open at the same time", `${m.mostAtOnce}`, "across all assets; this much money can be tied up at once")}
+      ${row("⏱️", "How busy the app is", `${m.roundsPerDay.toFixed(0)} rounds a day · ${m.roundsPerHour.toFixed(0)} an hour`, `${m.roundsInGoal ? "✅ inside" : "⚠️ outside"} the goal of ${data.roundsGoal.min}-${data.roundsGoal.max} a day${m.quietMinutes === null ? "" : `; 9 in 10 waits for a new round are ${m.quietMinutes} min or less`}`)}
     </div>`;
   }
   render();

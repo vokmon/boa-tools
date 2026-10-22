@@ -1,6 +1,7 @@
 import { renderTable, type TableColumn } from "@/lib/output/table";
 import type { BacktestResult, SettingResult } from "../runBacktest";
-import { checkCell, finishedRounds, fullLossEvery, hourList, money, ordered, percent, share } from "./format";
+import { ROUNDS_PER_DAY_GOAL } from "@/domain/backtest/summary";
+import { breakEvenPct, checkCell, finishedRounds, fullLossEvery, hourList, money, ordered, percent, quietCell, roundsCell, share } from "./format";
 
 /** The results as terminal lines: the main table, risk, when to trade, and a short legend. */
 export function resultLines(run: BacktestResult): string[] {
@@ -10,9 +11,11 @@ export function resultLines(run: BacktestResult): string[] {
 
   const main: TableColumn<SettingResult | null>[] = [
     { value: (r) => (r ? r.setting.label : "Setting"), maxWidth: 60 },
-    { value: (r) => (r ? r.summary.roundsPerDay.toFixed(0) : "Rounds/day"), align: "right" },
-    { value: (r) => (r ? percent(r.summary.roundWinPct) : "Round win"), align: "right" },
-    { value: (r) => (r ? share(r.summary.wonAtLevel[0] ?? 0, finishedRounds(r)) : "No mart."), align: "right" },
+    { value: (r) => (r ? roundsCell(r.summary.roundsPerDay) : "Rounds/day"), align: "right" },
+    { value: (r) => (r ? r.summary.roundsPerHour.toFixed(0) : "Per hour"), align: "right" },
+    { value: (r) => (r ? quietCell(r.summary.quietMinutes) : "Quiet"), align: "right" },
+    { value: (r) => (r ? `${r.summary.firstWinPct >= breakEvenPct(r.setting.order.payout) ? "✅" : "❌"} ${percent(r.summary.firstWinPct)}` : "First order"), align: "right" },
+    { value: (r) => (r ? percent(r.summary.roundWinPct) : "Any level"), align: "right" },
     ...Array.from({ length: levels }, (_, i): TableColumn<SettingResult | null> => ({
       value: (r) => (r ? (i + 1 <= r.setting.martingale.levels ? share(r.summary.wonAtLevel[i + 1] ?? 0, finishedRounds(r)) : "-") : `L${i + 1}`),
       align: "right",
@@ -64,9 +67,11 @@ export function resultLines(run: BacktestResult): string[] {
     ...renderTable([null, ...rows], hours, "   "),
     "",
     "   ℹ️  Round = one signal and its martingale orders, until a win or all orders lose.",
-    "      Round win = rounds that ended in a win at any level. No mart./L1-L4 = where the win came.",
+    `      Rounds/day ✅ = inside the goal of ${ROUNDS_PER_DAY_GOAL.min}-${ROUNDS_PER_DAY_GOAL.max}. Quiet = 9 in 10 waits for a new round are this long or shorter.`,
+    `      First order = how often the first order wins; ✅ above ${percent(breakEvenPct(first.order.payout), 2)}, the break-even, the one number that decides profit.`,
+    "      Any level = rounds won at any level (high even for a bad setting). L1-L4 = rounds won at that martingale level.",
     "      Lost all = every order of the round lost. Profit = all rounds of all assets together.",
     "      Losing days = days that ended negative. Biggest drop = deepest fall from a high point (balance to keep).",
-    "      Last 2 wks = round win in the newest 2 weeks; ✅ still profitable there, ⚠️ much worse (maybe luck).",
+    "      Last 2 wks = first-order win and profit per day in the newest 2 weeks; ✅ still profitable, ⚠️ much worse (maybe luck).",
   ];
 }

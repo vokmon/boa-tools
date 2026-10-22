@@ -103,7 +103,9 @@ describe("summarize", () => {
       days: 2,
       rounds: 5,
       roundsPerDay: 2.5,
+      roundsPerHour: 2.5 / 24,
       roundWinPct: 75,
+      firstWinPct: 50,
       wonAtLevel: [2, 1, 0, 0, 0],
       lost: 1,
       stopped: 1,
@@ -116,9 +118,21 @@ describe("summarize", () => {
     });
   });
 
+  test("rounds per hour and the quiet stretch only count the hours a setting trades", () => {
+    const days = ["2026-10-19", "2026-10-20"];
+    // 10:00, 10:01 Bangkok on the 19th; 10:00, 10:10, 10:11 on the 20th
+    const rounds = [day("2026-10-19"), day("2026-10-19") + 60, day("2026-10-20"), day("2026-10-20") + 600, day("2026-10-20") + 700].map((t) => round(t, 0, 8.5));
+    const tenOnly = Array.from({ length: 24 }, (_, h) => h === 10);
+    // All day: the wait overnight counts as quiet too
+    expect(summarize(rounds, days, 4)).toMatchObject({ roundsPerHour: 5 / 48, quietMinutes: 1439 });
+    // Trading 10:00-11:00 only: waits 1, 10 and 1 minute; the overnight break is not a quiet stretch
+    expect(summarize(rounds, days, 4, tenOnly)).toMatchObject({ roundsPerHour: 2.5, quietMinutes: 10 });
+    expect(summarize([], days, 4).quietMinutes).toBeNull();
+  });
+
   test("hour windows merge neighbouring hours", () => {
     const status = (h: number) => (h >= 7 && h < 11 ? "good" : h === 15 || h === 16 ? "avoid" : "ok");
-    const hours = Array.from({ length: 24 }, (_, hour): HourStat => ({ hour, rounds: 50, won: 49, profit: 1, status: status(hour) }));
+    const hours = Array.from({ length: 24 }, (_, hour): HourStat => ({ hour, rounds: 50, won: 49, firstWon: 25, profit: 1, status: status(hour) }));
     expect(hourRanges(hours, "good")).toEqual(["07-11"]);
     expect(hourRanges(hours, "avoid")).toEqual(["15-17"]);
   });

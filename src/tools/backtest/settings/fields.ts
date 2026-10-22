@@ -2,7 +2,7 @@ import type { SignalSettings } from "@/domain/signal";
 
 /**
  * The numbers a settings file can set, by their path in the file. One table drives validation,
- * the mapping to the signal engine, the README and the AI brief, so they cannot disagree.
+ * the mapping to the signal engine, docs/settings.md and the AI brief, so they cannot disagree.
  */
 export interface NumberField {
   path: string;

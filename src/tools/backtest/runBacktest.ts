@@ -20,6 +20,8 @@ export interface AssetResult {
   name: string;
   isOtc: boolean;
   rounds: number;
+  /** Rounds won by the first order. */
+  firstWon: number;
   lost: number;
   profit: number;
 }
@@ -109,6 +111,7 @@ export function runBacktest(cache: LocalCandleCache, settings: readonly RunSetti
           name: asset.name,
           isOtc: asset.isOtc,
           rounds: assetRounds.length,
+          firstWon: assetRounds.filter((r) => r.wonAt === 0).length,
           lost: assetRounds.filter((r) => r.wonAt === -1).length,
           profit: assetRounds.reduce((sum, r) => sum + r.profit, 0),
         });
@@ -124,7 +127,7 @@ export function runBacktest(cache: LocalCandleCache, settings: readonly RunSetti
     results: settings.map((setting, i) => {
       const views = levels[i]!.map((maxLevel, l): LevelResult => ({
         levels: maxLevel,
-        summary: summarize(rounds[i]![l]!, period.days, maxLevel),
+        summary: summarize(rounds[i]![l]!, period.days, maxLevel, setting.hours),
         worstRound: worstCaseStake({ ...setting.martingale, levels: maxLevel }, setting.order),
         byAsset: perAsset[i]![l]!.sort((a, b) => b.profit - a.profit),
       }));
