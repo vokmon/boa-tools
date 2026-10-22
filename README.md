@@ -27,11 +27,14 @@ src/
   config/     env validation (env.ts) and fixed business constants (constants.ts)
   lib/        tool-agnostic helpers: cli (commands, help, prompts), retrying fetch, logger, dates, CSV, tables
   clients/    thin services over the official SDKs (@wix/sdk, @sentry/api, IQ Option, Turso); no business logic
-  storage/    candle data shared by tools (CandleDb: tables and queries in Turso)
-  domain/     BOA knowledge shared by tools: app log formats, trades and profit/loss, subscriptions
+  storage/    candle data shared by tools: CandleDb (Turso) and LocalCandleCache (local SQLite copy for the backtest)
+  domain/     BOA knowledge shared by tools: app log formats, trades and profit/loss, subscriptions,
+              the bot's signal (domain/signal: same rules as iq-robot, every value a setting)
   tools/      one folder per tool; the only place that combines clients
-  tools/shared/  options several tools ask for: date range, Sentry projects
+  tools/shared/  pieces several tools use: date range and Sentry project options, candle collection (shared/candles)
 tests/        bun test, using fake fetch / fake services
+  reference/iq-robot/  frozen copy of the bot's signal code; tests prove domain/signal matches it
+  fixtures/            small real data samples for tests
 docs/         plans and findings
 ```
 

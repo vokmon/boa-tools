@@ -32,7 +32,7 @@ export function loadIqOptionEnv(source: Record<string, string | undefined> = pro
   return parseEnv(IqOptionEnvSchema, source);
 }
 
-/** Folder for files tools write (CSV reports). `DATA_DIR` in .env, default `data`. */
+/** Folder for files tools write (candles cache, reports). `DATA_DIR` in .env, default `data`. */
 export function dataDir(source: Record<string, string | undefined> = process.env): string {
   return source.DATA_DIR?.trim() || "data";
 }
@@ -40,6 +40,16 @@ export function dataDir(source: Record<string, string | undefined> = process.env
 /** Turso database that holds the candles. */
 export function loadTursoEnv(source: Record<string, string | undefined> = process.env): TursoEnv {
   return parseEnv(TursoEnvSchema, source);
+}
+
+/** Folder with backtest settings files (*.json). `BACKTEST_SETTINGS_DIR` in .env, default `backtest/settings`. */
+export function backtestSettingsDir(source: Record<string, string | undefined> = process.env): string {
+  return source.BACKTEST_SETTINGS_DIR?.trim() || "backtest/settings";
+}
+
+/** Folder for backtest results, one subfolder per run. `BACKTEST_RESULTS_DIR` in .env, default `<DATA_DIR>/backtest`. */
+export function backtestResultsDir(source: Record<string, string | undefined> = process.env): string {
+  return source.BACKTEST_RESULTS_DIR?.trim() || `${dataDir(source)}/backtest`;
 }
 
 function parseEnv<S extends z.ZodType>(schema: S, source: Record<string, string | undefined>): z.infer<S> {

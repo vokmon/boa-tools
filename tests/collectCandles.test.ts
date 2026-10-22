@@ -3,8 +3,8 @@ import { createClient } from "@libsql/client";
 import { CandlesService } from "@/clients/iqoption/CandlesService";
 import type { RawCandle } from "@/clients/iqoption/types";
 import { CandleDb } from "@/storage/CandleDb";
-import { CandleCollector, dayStatus, firstFullDay } from "@/tools/collect-candles/CandleCollector";
-import { dataDir } from "@/config/env";
+import { CandleCollector, dayStatus, firstFullDay } from "@/tools/shared/candles/CandleCollector";
+import { backtestResultsDir, backtestSettingsDir, dataDir } from "@/config/env";
 
 const NOW = new Date("2026-10-21T08:00:00Z");
 const dayStart = (day: string) => Date.parse(`${day}T00:00:00Z`) / 1000;
@@ -151,5 +151,13 @@ describe("dataDir", () => {
     expect(dataDir({})).toBe("data");
     expect(dataDir({ DATA_DIR: "  " })).toBe("data");
     expect(dataDir({ DATA_DIR: "/Volumes/ext/boa" })).toBe("/Volumes/ext/boa");
+  });
+
+  test("backtest folders default under the repo and data dir, and follow .env", () => {
+    expect(backtestSettingsDir({})).toBe("backtest/settings");
+    expect(backtestSettingsDir({ BACKTEST_SETTINGS_DIR: "my-settings" })).toBe("my-settings");
+    expect(backtestResultsDir({})).toBe("data/backtest");
+    expect(backtestResultsDir({ DATA_DIR: "/Volumes/ext/boa" })).toBe("/Volumes/ext/boa/backtest");
+    expect(backtestResultsDir({ DATA_DIR: "/x", BACKTEST_RESULTS_DIR: "~/Desktop/backtests" })).toBe("~/Desktop/backtests");
   });
 });

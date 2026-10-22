@@ -1,9 +1,17 @@
 import type { Client, InStatement } from "@libsql/client";
 import type { RawCandle, UnderlyingInfo } from "@/clients/iqoption/types";
+import type { Candle } from "@/domain/signal";
 import { retry } from "@/lib/retry";
 
 /** complete: the whole day is in the past and inside the broker's history; never fetched again. */
 export type DayStatus = "complete" | "partial";
+
+export interface DayVersion {
+  activeId: number;
+  day: string;
+  candleCount: number;
+  collectedAt: string;
+}
 
 export interface StoredAsset extends UnderlyingInfo {
   firstSeen: string;
@@ -109,6 +117,24 @@ export class CandleDb {
     });
     // A batch is one transaction, so retrying after a dropped connection cannot write it twice
     await retry(() => this.db.batch(statements, "write"), { label: `save ${activeId} ${input.day}` });
+  }
+
+  /** Every complete asset-day with when it was collected; a newer collectedAt means the day changed. */
+  async completeDayVersions(size: number): Promise<DayVersion[]> {
+    const { rows } = await this.db.execute({
+      sql: "SELECT active_id, day, candle_count, collected_at FROM collected_days WHERE size = ? AND status = 'complete'",
+      args: [size],
+    });
+    return rows.map((r) => ({ activeId: Number(r.active_id), day: String(r.day), candleCount: Number(r.candle_count), collectedAt: String(r.collected_at) }));
+  }
+
+  /** Only the fields the backtest uses, for one asset in [fromTs, toTs); a primary-key range scan. */
+  async ohlc(activeId: number, size: number, fromTs: number, toTs: number): Promise<Candle[]> {
+    const { rows } = await this.db.execute({
+      sql: "SELECT from_ts, open, close, min, max FROM candles WHERE active_id = ? AND size = ? AND from_ts >= ? AND from_ts < ? ORDER BY from_ts",
+      args: [activeId, size, fromTs, toTs],
+    });
+    return rows.map((r) => ({ from: Number(r.from_ts), open: Number(r.open), close: Number(r.close), min: Number(r.min), max: Number(r.max) }));
   }
 
   /** Candles of one asset in [fromTs, toTs), oldest first. */

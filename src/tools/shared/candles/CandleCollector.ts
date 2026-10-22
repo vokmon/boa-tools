@@ -58,10 +58,32 @@ export function firstFullDay(now: Date, size: number): string {
   return new Date(start * 1000).toISOString().slice(0, 10);
 }
 
+export interface DayReport {
+  day: string;
+  status: DayStatus;
+  /** Assets fetched this run; 0 when the whole day was already collected. */
+  fetched: number;
+  candles: number;
+  seconds: number;
+}
+
+/** How the collector reports progress; the default prints one line per day. */
+export interface CollectEvents {
+  day(report: DayReport): void;
+  failed(day: string, asset: string, message: string): void;
+}
+
+export const lineEvents: CollectEvents = {
+  day: (r) =>
+    logger.info(r.fetched === 0 ? `${r.day}  already collected` : `${r.day}  ${r.fetched} assets  ${r.candles.toLocaleString("en-US")} candles  ${r.seconds.toFixed(1)}s${r.status === "partial" ? "  (partial)" : ""}`),
+  failed: (day, asset, message) => logger.warn(`${day} ${asset}: ${message}`),
+};
+
 export class CandleCollector {
   constructor(
     private readonly db: Pick<CandleDb, "completeDays" | "saveDay">,
     private readonly fetcher: DayFetcher,
+    private readonly events: CollectEvents = lineEvents,
   ) {}
 
   async collect(input: CollectInput): Promise<CollectSummary> {
@@ -78,7 +100,7 @@ export class CandleCollector {
       const todo = assets.filter((a) => !done.has(dayKey(a.activeId, day)));
       summary.skipped += assets.length - todo.length;
       if (todo.length === 0) {
-        logger.info(`${day}  already collected`);
+        this.events.day({ day, status, fetched: 0, candles: 0, seconds: 0 });
         continue;
       }
 
@@ -94,13 +116,13 @@ export class CandleCollector {
           if (status === "partial") summary.partial++;
         } catch (error) {
           // Not marked collected, so the next run retries it
-          summary.failed.push(`${day} ${asset.name} (${asset.activeId}): ${(error as Error)?.message ?? error}`);
-          logger.warn(`${day} ${asset.name}: ${(error as Error)?.message ?? error}`);
+          const message = (error as Error)?.message ?? String(error);
+          summary.failed.push(`${day} ${asset.name} (${asset.activeId}): ${message}`);
+          this.events.failed(day, asset.name, message);
         }
       });
       summary.candles += dayCandles;
-      const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
-      logger.info(`${day}  ${todo.length} assets  ${dayCandles.toLocaleString("en-US")} candles  ${seconds}s${status === "partial" ? "  (partial)" : ""}`);
+      this.events.day({ day, status, fetched: todo.length, candles: dayCandles, seconds: (Date.now() - startedAt) / 1000 });
     }
     return summary;
   }
