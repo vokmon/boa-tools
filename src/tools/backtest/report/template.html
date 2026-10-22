@@ -43,7 +43,23 @@
   .chips-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 12px; }
   .lvl-pick { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
   .lvl-pick.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-  .switch { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 14px -16px 0; padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+  .fact { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .fact .label { color: var(--muted); font-size: 12px; }
+  .fact .value { font-size: 17px; font-weight: 650; margin-top: 2px; }
+  .fact .sub { color: var(--muted); font-size: 12px; }
+  table.compare th.group { text-align: center; color: var(--text); font-weight: 650; border-bottom: 2px solid var(--line); cursor: default; }
+  .legend-line { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .best-chip { background: var(--good-soft); color: var(--text); padding: 0 8px; border-radius: 6px; }
+  .panel.wide { grid-column: 1 / -1; }
+  details.guide > summary { list-style: none; cursor: pointer; }
+  details.guide > summary::-webkit-details-marker { display: none; }
+  details.guide > summary h2::before { content: "▸"; color: var(--muted); transition: transform .15s; display: inline-block; }
+  details.guide[open] > summary h2::before { transform: rotate(90deg); }
+  .verdict { margin: 8px 0 0; font-size: 14px; }
+  .bar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .bar-row > .muted { width: 7.5em; }
+  .switch { position: sticky; top: 0; z-index: 5; display: flex; flex-direction: column; gap: 6px; margin: 14px -16px 0; padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
   .lvl { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 8px; padding: 5px 12px; font: inherit; font-size: 14px; cursor: pointer; }
   .lvl.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   th:first-child, td:first-child { text-align: left; }
@@ -73,7 +89,7 @@
   .card .higher { margin-top: 6px; color: var(--muted); font-size: 13px; }
   .card .bot { margin-top: 6px; font-size: 12px; color: var(--accent); }
   svg text { fill: var(--muted); font-size: 11px; }
-  .outcomes { display: grid; grid-template-columns: 3.6em 8.5em 1fr 4.5em; gap: 4px 10px; align-items: center; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .outcomes { display: grid; grid-template-columns: 4.2em 8.5em 1fr 4.5em; gap: 4px 10px; align-items: center; font-size: 14px; font-variant-numeric: tabular-nums; }
   .outcomes .head { color: var(--muted); font-size: 12px; }
   .outcomes .count { font-size: 18px; font-weight: 700; text-align: right; }
   .outcomes .track { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
@@ -101,7 +117,7 @@
   .note { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
   footer { margin-top: 48px; color: var(--muted); font-size: 12px; }
   @media (max-width: 860px) {
-    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tiles, .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid2, .cards { grid-template-columns: 1fr; }
   }
 </style>
@@ -115,11 +131,15 @@
   const data = JSON.parse(document.getElementById("report-data").textContent);
   const app = document.getElementById("app");
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-  const money = (n) => { const r = Math.round(n); return (r > 0 ? "+" : "") + r.toLocaleString("en-US"); };
+  const money = (n) => { const r = Math.round(n) || 0; return (r > 0 ? "+" : "") + r.toLocaleString("en-US"); };
   const pct = (n, d = 1) => n.toFixed(d) + "%";
   const sign = (n) => (n > 0 ? "good" : n < 0 ? "bad" : "");
   /** 13543 -> "13.5k", 950 -> "950" */
   const short = (n) => { const a = Math.abs(n), t = a >= 1000 ? `${(a / 1000).toFixed(1)}k` : String(Math.round(a)); return (n > 0 ? "+" : n < 0 ? "−" : "") + t; };
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  /** "2026-10-14" -> "14 Oct 2026" */
+  const longDay = (day) => `${Number(day.slice(8))} ${MONTHS[Number(day.slice(5, 7)) - 1]} ${day.slice(0, 4)}`;
+  const fact = (icon, label, value, sub) => `<div class="fact"><div class="label">${icon} ${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;
   /** "2026-10-14" -> "14/10" */
   const dm = (day) => `${day.slice(8)}/${day.slice(5, 7)}`;
   const clock = (hour) => `${String(hour % 24).padStart(2, "0")}:00`;
@@ -129,72 +149,85 @@
   const levelColor = (i, levels) => (i > levels ? "var(--lost)" : `var(--l${Math.min(i, 8)})`);
   const settings = data.settings;
   const bot = settings.find((s) => s.isBot);
-  // The max martingale level the page shows: "own" = each setting's level from its file
-  let level = "own";
+  // What the page shows, chosen in the bar at the top: assets x multiplier x max martingale
+  const groupNames = { total: "Total", main: "Main", otc: "OTC" };
+  const view = {
+    group: "total",
+    multiplier: String(data.multiplierOptions[0]),
+    level: String(data.levelOptions.includes(4) ? 4 : data.levelOptions.at(-1)),
+  };
   let tab = 0;
-  const vw = (s) => s.views[String(level === "own" ? s.ownLevel : level)] || s.views[String(s.ownLevel)];
+  const openGuides = { numbers: false, settings: false };
+  /** The setting's views at the chosen multiplier, or its own when it was not run at that one. */
+  const variant = (s) => s.views[view.multiplier] || Object.values(s.views)[0];
+  const multiplierOf = (s) => (s.views[view.multiplier] ? view.multiplier : Object.keys(s.views)[0]);
+  const vw = (s, level = view.level) => variant(s)[view.group][String(level)];
+  const bestLevel = (s) => Object.values(variant(s)[view.group]).sort((a, b) => b.summary.profitPerDay - a.summary.profitPerDay)[0].levels;
   const levelName = (l) => (l === 0 ? "no martingale" : `max martingale ${l}`);
-  const levelLabel = (l) => (l === 0 ? "No martingale" : `Max ${l}`);
-  const setLevel = (value) => {
-    level = value === "own" ? "own" : Number(value);
+  const set = (key, value) => {
+    view[key] = value;
     render();
   };
 
   function render() {
     const best = [...settings].sort((a, b) => vw(b).summary.profitPerDay - vw(a).summary.profitPerDay)[0];
     const top = vw(best).summary;
-    const showing = level === "own" ? "each setting at its own max martingale" : `every setting at ${levelName(level)}`;
+    const showing = `${groupNames[view.group]} · x${view.multiplier} · ${levelName(Number(view.level))}`;
+    const bar = (key, label, options, name) => `<div class="bar-row"><span class="muted small">${label}</span>
+      ${options.map((o) => `<button class="lvl${String(view[key]) === String(o) ? " on" : ""}" data-key="${key}" data-value="${o}">${name(o)}</button>`).join("")}</div>`;
 
     // Header, the level switch and tiles
     let html = `
       <h1>🧪 Backtest report</h1>
-      <div class="muted">${data.period.days} days (${data.period.from} → ${data.period.to}, Bangkok time) · ${data.assets} assets · ${data.candles.toLocaleString("en-US")} one-minute candles ·
-        order ${data.order.amount} THB · payout ${data.order.payout}% · money in THB</div>
-      <div class="switch"><span class="muted small">Max martingale</span>
-        ${["own", ...data.levelOptions].map((o) => `<button class="lvl${String(level) === String(o) ? " on" : ""}" data-level="${o}">${o === "own" ? "Each setting's own" : o === 0 ? "None" : o}</button>`).join("")}
-        <span class="muted small">showing ${showing}</span></div>`;
+      <div class="facts">
+        ${fact("📅", "Period", `${longDay(data.period.from)} – ${longDay(data.period.to)}`, `${data.period.days} days, Bangkok time`)}
+        ${fact("📈", "Assets", data.assets, `${data.assets - data.otcAssets} main · ${data.otcAssets} OTC`)}
+        ${fact("🕯", "Candles", `${(data.candles / 1e6).toFixed(1)} M`, "one-minute")}
+        ${fact("💵", "Orders", `${data.order.amount} THB first`, `${data.order.payout}% payout · money in THB`)}
+      </div>
+      <div class="switch">
+        ${bar("group", "Assets", data.groupOptions, (o) => groupNames[o])}
+        ${bar("multiplier", "Multiplier", data.multiplierOptions, (o) => `x${o}`)}
+        ${bar("level", "Max martingale", data.levelOptions, (o) => (o === 0 ? "None" : o))}
+      </div>`;
     html += `<div class="tiles">
       <div class="panel tile"><div class="label">Best setting (profit per day)</div><div class="value">${esc(best.label)}</div>
-        <div class="sub">at ${levelName(vw(best).levels)}${best.isBot ? " · the bot's settings" : ""}</div></div>
+        <div class="sub">${showing}${best.isBot ? " · the bot's settings" : ""}</div></div>
       <div class="panel tile"><div class="label">Profit per day</div><div class="value ${sign(top.profitPerDay)}">${money(top.profitPerDay)}</div>
-        <div class="sub">${bot && bot !== best ? `bot: ${money(vw(bot).summary.profitPerDay)} at ${levelName(vw(bot).levels)}` : `${money(top.profit)} over ${top.days} days`}</div></div>
+        <div class="sub">${bot && bot !== best ? `bot: ${money(vw(bot).summary.profitPerDay)}` : `${money(top.profit)} over ${top.days} days`}</div></div>
       <div class="panel tile"><div class="label">First order wins</div><div class="value ${top.firstOrderWinPct >= data.breakEvenPct ? "good" : "bad"}">${pct(top.firstOrderWinPct)}</div>
-        <div class="sub">needs ${pct(data.breakEvenPct, 2)} to break even · ${top.roundsPerDay.toFixed(0)} rounds a day ${top.roundsInGoal ? "✅" : `⚠️ goal ${data.roundsGoal.min}-${data.roundsGoal.max}`}</div></div>
+        <div class="sub">needs ${pct(data.breakEvenPct, 2)} to break even · ${top.weekdays.roundsPerDay.toFixed(0)} rounds a weekday ${top.roundsInGoal ? "✅" : `⚠️ goal ${data.roundsGoal.min}-${data.roundsGoal.max}`}</div></div>
       <div class="panel tile"><div class="label">Last ${data.checkDays} days</div><div class="value">${top.check.heldUp ? "✅ held up" : "⚠️ dropped"}</div>
         <div class="sub">first order ${pct(top.check.beforeFirstWinPct)} → ${pct(top.check.lastFirstWinPct)} · ${money(top.check.beforePerDay)} → ${money(top.check.lastPerDay)} per day</div></div>
     </div>`;
 
     // ① Compare
-    const shownLevels = Math.max(...settings.map((s) => vw(s).levels));
+    const goal = (ok) => (ok ? "✅" : "❌");
+    const groupsOfCols = [
+      { name: "How busy?", cols: 3 },
+      { name: "Does it win?", cols: 2 },
+      { name: "Money", cols: 2 },
+    ];
     const cols = [
-      { name: "Max mart.", guide: "Martingale levels", get: (s) => vw(s).levels, show: (v) => (v === 0 ? "none" : v) },
-      { name: "Rounds per day", get: (s) => vw(s).summary.roundsPerDay, show: (v, s) => `${vw(s).summary.roundsInGoal ? "✅" : "⚠️"} ${v.toFixed(0)}` },
-      { name: "Per hour", guide: "Rounds per hour", get: (s) => vw(s).summary.roundsPerHour, show: (v) => v.toFixed(0) },
-      { name: "Quiet", guide: "Quiet stretch", get: (s) => vw(s).summary.quietMinutes, show: (v) => (v === null ? "-" : `${v} min`) },
-      { name: "First order", guide: "First-order win", get: (s) => vw(s).summary.firstOrderWinPct, show: (v) => `<span class="${v >= data.breakEvenPct ? "good" : "bad"}">${pct(v)}</span>`, best: "max" },
-      { name: "Any level", guide: "Won at any level", get: (s) => vw(s).summary.roundWinPct, show: (v) => pct(v) },
-      // Where the other rounds were won: each martingale level
-      ...Array.from({ length: shownLevels }, (_, i) => ({
-        name: `Mart. ${i + 1}`,
-        guide: "First order, Martingale 1 … 4",
-        get: (s) => vw(s).summary.endShares[i + 1] ?? 0,
-        show: (v, s) => (i + 1 < vw(s).summary.endShares.length - 1 ? pct(v, 0) : "-"),
-        best: null,
-      })),
-      { name: "Lost all", get: (s) => vw(s).summary.lostPct, show: (v) => pct(v), best: "min" },
-      { name: "Profit per day", get: (s) => vw(s).summary.profitPerDay, show: (v) => `<span class="${sign(v)}">${money(v)}</span>`, best: "max" },
-      { name: "Losing days", get: (s) => vw(s).summary.losingDays, show: (v, s) => `${v}/${vw(s).summary.days}`, best: "min" },
-      { name: "Biggest drop", get: (s) => vw(s).summary.biggestDrop, show: (v) => money(v), best: "max" },
-      { name: "Last 2 weeks", get: (s) => (vw(s).summary.check.heldUp ? 1 : 0), show: (v, s) => `${v ? "✅" : "⚠️"} ${pct(vw(s).summary.check.lastFirstWinPct)} · ${money(vw(s).summary.check.lastPerDay)}/day` },
-      { name: "Best level", guide: "Martingale levels", get: (s) => s.bestLevel, show: (v, s) => `${v === 0 ? "none" : v} <span class="muted small">${money(s.views[String(v)].summary.profitPerDay)}/day</span>` },
+      { name: "all days", guide: "Rounds per day", get: (s) => vw(s).summary.roundsPerDay, show: (v) => v.toFixed(0) },
+      { name: "weekday", guide: "Rounds per day", get: (s) => vw(s).summary.weekdays.roundsPerDay, show: (v, s) => `${vw(s).summary.roundsInGoal ? "✅" : "⚠️"} ${v.toFixed(0)}` },
+      { name: "weekend", guide: "Main / OTC / Total", get: (s) => vw(s).summary.weekend.roundsPerDay, show: (v) => v.toFixed(0) },
+      { name: "first order", guide: "First-order win", get: (s) => vw(s).summary.firstOrderWinPct, show: (v) => `${goal(v >= data.breakEvenPct)} ${pct(v)}`, best: "max" },
+      { name: `newest ${data.checkDays} days`, guide: "Last 2 weeks", get: (s) => vw(s).summary.check.lastFirstWinPct, show: (v) => `${goal(v >= data.breakEvenPct)} ${pct(v)}`, best: "max" },
+      { name: "per day", guide: "Profit per day", get: (s) => vw(s).summary.profitPerDay, show: (v) => `<span class="${sign(v)}">${money(v)}</span>`, best: "max" },
+      { name: "biggest drop", guide: "Biggest drop", get: (s) => vw(s).summary.biggestDrop, show: (v) => money(v), best: "max" },
     ];
     const bestOf = cols.map((c) => (c.best ? (c.best === "max" ? Math.max : Math.min)(...settings.map(c.get)) : null));
-    html += `<h2><span class="n">①</span> Compare <span class="muted small">${showing}</span></h2><div class="panel table-wrap"><table><thead><tr><th>Setting</th>
-      ${cols.map((c) => `<th title="${esc(guideText(c.guide || c.name))}">${c.name}</th>`).join("")}</tr></thead><tbody>
-      ${settings.map((s) => `<tr class="${s === bot ? "today" : ""}"><td>${esc(s.label)}</td>${cols
+    html += `<h2><span class="n">①</span> Compare <span class="muted small">${showing}</span></h2><div class="panel table-wrap"><table class="compare"><thead>
+      <tr><th></th>${groupsOfCols.map((g) => `<th colspan="${g.cols}" class="group">${g.name}</th>`).join("")}</tr>
+      <tr><th>Setting</th>${cols.map((c) => `<th title="${esc(guideText(c.guide || c.name))}">${c.name}</th>`).join("")}</tr></thead><tbody>
+      ${settings.map((s) => `<tr class="${s === bot ? "today" : ""}"><td>${esc(s.label)}${multiplierOf(s) !== view.multiplier ? ` <span class="muted small">x${multiplierOf(s)}</span>` : ""}</td>${cols
         .map((c, i) => `<td class="${bestOf[i] !== null && c.get(s) === bestOf[i] && settings.length > 1 ? "best" : ""}">${c.show(c.get(s), s)}</td>`)
         .join("")}</tr>`).join("")}</tbody></table>
-      <p class="note">Rounds per day ✅ = inside the goal of ${data.roundsGoal.min}-${data.roundsGoal.max}. First order = how often the first order wins, green above ${pct(data.breakEvenPct, 2)} (break-even). Any level = rounds won at any martingale level; Mart. 1 … = out of 100 rounds, how many were won by martingale 1, 2, … Best level = the max martingale with the most profit per day for that setting. Green = best in the column.</p></div>`;
+      <div class="legend-line">
+        <span>✅ meets the goal: ${data.roundsGoal.min}-${data.roundsGoal.max} rounds a weekday, first order above ${pct(data.breakEvenPct, 1)}</span>
+        <span>❌ ⚠️ misses it</span><span class="best-chip">best in the column</span><span>hover a column name for what it means</span>
+      </div></div>`;
 
     // ② One setting at a time
     html += `<h2><span class="n">②</span> One setting at a time <span class="muted small">${showing}</span></h2>
@@ -202,17 +235,21 @@
       <div id="detail"></div>`;
 
     // ③ What the numbers mean, ④ What the settings do
-    html += `<h2><span class="n">③</span> What the numbers mean</h2><div class="cards">
-      ${data.guide.results.map((g) => `<div class="panel card"><h3>${esc(g.name)}</h3><p>${esc(g.text)}</p></div>`).join("")}</div>`;
-    html += `<h2><span class="n">④</span> What the settings do</h2>
+    const section = (key, n, title, count, body) => `<details class="guide" data-guide="${key}"${openGuides[key] ? " open" : ""}>
+      <summary><h2><span class="n">${n}</span> ${title} <span class="muted small">${count}</span></h2></summary>${body}</details>`;
+    html += section("numbers", "③", "What the numbers mean", `${data.guide.results.length} explanations`, `<div class="cards">
+      ${data.guide.results.map((g) => `<div class="panel card"><h3>${esc(g.name)}</h3><p>${esc(g.text)}</p></div>`).join("")}</div>`);
+    html += section("settings", "④", "What the settings do", `${data.guide.groups.length} groups`, `
       ${data.guide.groups.map((g) => `<div class="panel" style="margin-bottom:12px"><h3>${esc(g.name)}</h3><p class="muted small" style="margin:0 0 12px">${esc(g.about)}</p>
         <div class="cards">${g.settings.map((s) => `<div class="card"><h3>${esc(s.name)}</h3><p>${esc(s.text)}</p>
-          ${s.higher ? `<div class="higher">${esc(s.higher)}</div>` : ""}<div class="bot">${esc(s.path)} · bot: ${esc(s.bot)}</div></div>`).join("")}</div></div>`).join("")}`;
+          ${s.higher ? `<div class="higher">${esc(s.higher)}</div>` : ""}<div class="bot">${esc(s.path)} · bot: ${esc(s.bot)}</div></div>`).join("")}</div></div>`).join("")}`);
     html += `<footer>Generated ${new Date(data.createdAt).toLocaleString()} by bun run backtest. Simulation: each order buys at its candle's open and settles at its close.</footer>`;
     app.innerHTML = html;
 
-    document.querySelectorAll(".lvl").forEach((b) => b.addEventListener("click", () => setLevel(b.dataset.level)));
+    document.querySelectorAll(".lvl").forEach((b) => b.addEventListener("click", () => set(b.dataset.key, b.dataset.value)));
     document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(Number(t.dataset.tab))));
+    // Keep the explanations open or closed when the bar redraws the page
+    document.querySelectorAll("details.guide").forEach((d) => d.addEventListener("toggle", () => (openGuides[d.dataset.guide] = d.open)));
     show(tab);
   }
 
@@ -220,19 +257,19 @@
     tab = i;
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", Number(t.dataset.tab) === i));
     document.getElementById("detail").innerHTML = settingPanel(settings[i]);
-    document.querySelectorAll(".lvl-pick").forEach((b) => b.addEventListener("click", () => setLevel(b.dataset.level)));
+    document.querySelectorAll(".lvl-pick").forEach((b) => b.addEventListener("click", () => set("level", b.dataset.level)));
   }
 
   function settingPanel(s) {
     const v = vw(s);
     const m = v.summary;
     return `
-      <p class="muted" style="margin-top:0"><b>${esc(s.label)}</b> at <b>${levelName(v.levels)}</b>${s.note ? ` · ${esc(s.note)}` : ""}</p>
+      <p class="muted" style="margin-top:0"><b>${esc(s.label)}</b> · ${groupNames[view.group]} · x${multiplierOf(s)} · ${levelName(v.levels)}${s.note ? ` · ${esc(s.note)}` : ""}</p>
       ${levelChips(s, v.levels)}
       <div class="grid2">
-        <div class="panel"><h3>How rounds end</h3>${outcomes(m)}</div>
+        <div class="panel wide"><h3>How rounds end</h3>${outcomes(m)}${daysTable(m)}</div>
         <div class="panel"><h3>When to trade <span class="muted small">(Bangkok time)</span></h3>${hoursChart(m.hours)}${hourLists(m)}</div>
-        <div class="panel"><h3>Profit day by day</h3>${dailyChart(m)}</div>
+        <div class="panel"><h3>Week by week: is the first-order win steady?</h3>${weeklyChart(m)}</div>
         <div class="panel"><h3>Money and risk</h3>${moneyBlocks(m)}</div>
         <div class="panel"><h3>Settings used <span class="muted small">(changed from the bot in blue)</span></h3><div class="kv">
           ${s.groups.map((g) => `<div class="group-name">${esc(g.name)}</div>${g.items.map((it) => `<div>${esc(it.name)}</div>
@@ -245,14 +282,14 @@
       </div>`;
   }
 
-  /** Out of 100 rounds: on which try they were won (or lost), what each earns, and the first try against break-even. */
+  /** Share of rounds: on which try they were won (or lost), what each earns, and the first try against break-even. */
   function outcomes(m) {
     const levels = m.endShares.length - 2;
-    const top = Math.max(...m.endShares);
+    const top = Math.max(...m.endShares) || 1;
     const rows = m.endShares.map((p, i) => {
       const lost = i > levels;
       const hint = lost ? `every one of the ${levels + 1} orders lost` : i === 0 ? "the first order won, no martingale" : `won after ${i} loss${i > 1 ? "es" : ""} (martingale level ${i})`;
-      return `<div class="count ${lost ? "bad" : ""}" title="${hint}">${p >= 1 || p === 0 ? Math.round(p) : "<1"}</div>
+      return `<div class="count ${lost ? "bad" : ""}" title="${hint}">${p >= 1 || p === 0 ? Math.round(p) : "<1"}%</div>
         <div title="${hint}">${lost ? "❌ Lost all" : i === 0 ? "✅ First order" : `✅ Martingale ${i}`}</div>
         <div class="track" title="${hint}"><div class="fill" style="width:${(p / top) * 100}%;background:${levelColor(i, levels)}"></div></div>
         <div class="money ${sign(m.endMoney[i])}">${money(m.endMoney[i])}</div>`;
@@ -264,13 +301,28 @@
       ? "The first order wins often enough to make money."
       : `Martingale turns ${m.roundWinPct.toFixed(0)} of 100 rounds into wins, but the lost rounds cost more than all the wins bring.`;
     return `<div class="outcomes">
-        <div class="head" style="text-align:right;white-space:nowrap">of 100</div><div class="head">rounds</div><div></div><div class="head" style="text-align:right">THB each</div>
+        <div class="head" style="text-align:right;white-space:nowrap">Share</div><div class="head">of rounds</div><div></div><div class="head" style="text-align:right">THB each</div>
         ${rows.join("")}</div>
       <div class="verdict-line" title="${why}">
         <span>First order wins <b class="${ok ? "good" : "bad"}">${m.firstOrderWinPct.toFixed(1)}%</b></span>
         <div class="gauge"><div class="val" style="width:${at(m.firstOrderWinPct)}%;background:${ok ? "var(--good)" : "var(--bad)"}"></div><div class="mark" style="left:${at(data.breakEvenPct)}%"></div></div>
         <span>needs <b>${data.breakEvenPct.toFixed(1)}%</b> &nbsp;${ok ? `✅ ${gap.toFixed(1)} above` : `❌ ${(-gap).toFixed(1)} short`}</span>
       </div>`;
+  }
+
+  /** The chosen assets on all days, weekdays, the weekend and the newest 2 weeks, with where rounds were won. */
+  function daysTable(m) {
+    const levels = m.endShares.length - 2;
+    const first = (g) => (g.roundsPerDay > 0 ? `<span class="${g.firstWinPct >= data.breakEvenPct ? "good" : "bad"}">${pct(g.firstWinPct)}</span>` : "-");
+    const share = (g, i) => (g.roundsPerDay > 0 ? pct(g.ends[i] ?? 0, 0) : "-");
+    const row = (name, g) => `<tr><td>${name}</td><td>${g.roundsPerDay.toFixed(0)}</td><td>${first(g)}</td>
+      ${Array.from({ length: levels }, (_, i) => `<td>${share(g, i + 1)}</td>`).join("")}<td class="bad">${share(g, levels + 1)}</td>
+      <td class="${sign(g.profitPerDay)}">${money(g.profitPerDay)}</td></tr>`;
+    const all = { roundsPerDay: m.roundsPerDay, firstWinPct: m.firstOrderWinPct, ends: m.endShares, profitPerDay: m.profitPerDay };
+    return `<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th></th><th>Rounds a day</th><th title="${esc(guideText("First-order win"))}">First order</th>
+        ${Array.from({ length: levels }, (_, i) => `<th>Mart. ${i + 1}</th>`).join("")}<th>Lost all</th><th>Profit a day</th></tr></thead>
+      <tbody>${row("All days", all)}${row("Weekday", m.weekdays)}${row("Weekend day", m.weekend)}${row(`Newest ${data.checkDays} days`, m.last2Weeks)}</tbody></table></div>
+      <div class="legend-line"><span>🗓 Weekend = Saturday and Sunday, Bangkok time. Main assets almost stop (only crypto trades).</span><span>🎯 The rounds goal counts weekdays.</span></div>`;
   }
 
   function hourLists(m) {
@@ -297,53 +349,44 @@
       <p class="note">Each bar is one hour of the day: the money rounds starting in that hour made over the whole test. Hover a bar for details.</p>`;
   }
 
-  /** A calendar of the test days (a row per week, Monday first), each day coloured by its profit; then the running total. */
-  function dailyChart(m) {
-    const days = m.daily;
-    if (!days.length) return `<p class="muted">No rounds.</p>`;
-    const biggest = Math.max(1, ...days.map((d) => Math.abs(d.profit)));
-    const tint = (p) => {
-      const strength = 0.15 + 0.85 * Math.min(1, Math.abs(p) / biggest);
-      const colour = p >= 0 ? "31, 157, 85" : "214, 69, 69";
-      return `rgba(${colour}, ${strength.toFixed(2)})`;
-    };
-    // Monday = 0; pad the first week so days line up under their weekday
-    const weekday = (day) => (new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7;
-    const cells = Array.from({ length: weekday(days[0].day) }, () => `<div class="day empty"></div>`);
-    for (const d of days) {
-      const strong = Math.abs(d.profit) / biggest > 0.5;
-      cells.push(`<div class="day" style="background:${tint(d.profit)};${strong ? "color:#fff" : ""}" title="${d.day}: ${money(d.profit)} THB">
-        <div class="d" style="${strong ? "color:rgba(255,255,255,.85)" : ""}">${dm(d.day)}</div><div class="p">${short(d.profit)}</div></div>`);
-    }
-    const head = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => `<div class="wd">${w}</div>`).join("");
-
-    // Running total, with a date label each week
-    const w = 480, h = 120, left = 58, right = 8, top = 8, bottom = 24;
-    let total = 0;
-    const running = days.map((d) => (total += d.profit));
-    const lo = Math.min(0, ...running), hi = Math.max(0, ...running);
-    const x = (i) => left + (i / Math.max(1, days.length - 1)) * (w - left - right);
-    const y = (v) => top + ((hi - v) / Math.max(1, hi - lo)) * (h - top - bottom);
-    const line = running.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    const ticks = [hi, 0, lo].filter((v, i, a) => a.indexOf(v) === i).map((v) => `<text x="${left - 6}" y="${y(v) + 4}" text-anchor="end">${short(v)}</text>`).join("");
-    const weeks = days.map((d, i) => (weekday(d.day) === 0 ? `<line x1="${x(i)}" x2="${x(i)}" y1="${top}" y2="${h - bottom}" stroke="var(--line)"/><text x="${x(i)}" y="${h - 6}" text-anchor="middle">${dm(d.day)}</text>` : "")).join("");
-    const end = running.at(-1);
-
-    return `<div class="calendar">${head}${cells.join("")}</div>
-      <div class="legend"><span style="--c:rgba(31,157,85,.9)">day in profit</span><span style="--c:rgba(214,69,69,.9)">day with a loss</span><span class="muted">darker = bigger amount · THB</span></div>
-      <div class="muted small" style="margin-top:12px">Running total</div>
-      <svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Running total">${weeks}
-        <line x1="${left}" x2="${w - right}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" stroke-dasharray="3 3"/>
-        <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2"/>${ticks}</svg>
-      <p class="note"><b>${m.daysInProfit}</b> of ${days.length} days ended in profit · total after ${days.length} days: <b class="${sign(end)}">${money(end)} THB</b></p>`;
+  /** First-order win week by week against break-even: does the edge hold over time, or was it one good stretch? */
+  function weeklyChart(m) {
+    const weeks = m.weekly.filter((w) => w.rounds > 0);
+    if (!weeks.length) return `<p class="muted">No rounds.</p>`;
+    const w = 480, h = 170, left = 34, right = 8, top = 10, bottom = 26;
+    const lo = Math.min(40, ...weeks.map((x) => Math.floor(x.firstWinPct))), hi = Math.max(60, ...weeks.map((x) => Math.ceil(x.firstWinPct)));
+    const y = (v) => top + ((hi - v) / (hi - lo)) * (h - top - bottom);
+    const bw = (w - left - right) / weeks.length;
+    const bars = weeks.map((x, i) => {
+      const ok = x.firstWinPct >= data.breakEvenPct;
+      const y0 = y(Math.max(lo, 50)), y1 = y(x.firstWinPct);
+      return `<rect x="${left + i * bw + 3}" y="${Math.min(y0, y1)}" width="${bw - 6}" height="${Math.max(1, Math.abs(y1 - y0))}" rx="2" fill="${ok ? "var(--good)" : "var(--bad)"}">
+          <title>week of ${longDay(x.week)} · ${x.rounds.toLocaleString("en-US")} rounds · first order wins ${pct(x.firstWinPct)}</title></rect>
+        <text x="${left + i * bw + bw / 2}" y="${h - 8}" text-anchor="middle">${dm(x.week)}</text>`;
+    });
+    const ticks = [lo, 50, hi].map((v) => `<text x="${left - 6}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`).join("");
+    const above = weeks.filter((x) => x.firstWinPct >= data.breakEvenPct).length;
+    const verdict =
+      above === weeks.length ? "✅ steady, an edge every week"
+      : above >= weeks.length * 0.75 ? "✅ mostly steady"
+      : above === 0 ? "❌ no edge in any week"
+      : "⚠️ not steady, an edge in some weeks only (may be luck)";
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="First-order win by week">${ticks}
+        <line x1="${left}" x2="${w - right}" y1="${y(50)}" y2="${y(50)}" stroke="var(--line)"/>
+        ${bars.join("")}
+        <line x1="${left}" x2="${w - right}" y1="${y(data.breakEvenPct)}" y2="${y(data.breakEvenPct)}" stroke="var(--text)" stroke-dasharray="4 3"/>
+        <text x="${w - right}" y="${y(data.breakEvenPct) - 4}" text-anchor="end">break-even ${pct(data.breakEvenPct, 1)}</text></svg>
+      <p class="verdict"><b>${above} of ${weeks.length} weeks</b> above break-even: ${verdict}</p>
+      <div class="legend-line"><span>each bar: one week's first-order win (weeks start Monday; hover for rounds)</span></div>`;
   }
 
   /** One line: this setting's profit per day at each max martingale; ⭐ best; click to switch the page. */
   function levelChips(s, shown) {
-    const views = Object.values(s.views).sort((a, b) => a.levels - b.levels);
+    const views = Object.values(variant(s)[view.group]).sort((a, b) => a.levels - b.levels);
+    const best = bestLevel(s);
     return `<div class="chips-line"><span class="muted small">Profit per day by max martingale:</span>
-      ${views.map((v) => `<button class="lvl-pick${v.levels === shown ? " on" : ""}" data-level="${v.levels}" title="See everything for ${esc(s.label)} at ${levelName(v.levels)}">
-        ${v.levels === 0 ? "None" : v.levels} <b class="${sign(v.summary.profitPerDay)}">${money(v.summary.profitPerDay)}</b>${v.levels === s.bestLevel ? " ⭐" : ""}</button>`).join("")}</div>`;
+      ${views.map((v) => `<button class="lvl-pick${v.levels === shown ? " on" : ""}" data-level="${v.levels}" title="See everything at ${levelName(v.levels)}">
+        ${v.levels === 0 ? "None" : v.levels} <b class="${sign(v.summary.profitPerDay)}">${money(v.summary.profitPerDay)}</b>${v.levels === best ? " ⭐" : ""}</button>`).join("")}</div>`;
   }
 
   /** The money numbers, and how busy the app is, as plain statements. */
@@ -351,11 +394,11 @@
     const row = (icon, k, v, s, cls = "") => `<div class="money-row"><div class="icon">${icon}</div><div><div class="k">${k}</div><div class="v ${cls}">${v}</div><div class="s">${s}</div></div></div>`;
     return `<div class="money-grid">
       ${row("💰", "You would earn per day", `${money(m.profitPerDay)} THB`, `${money(m.profit)} THB over the ${m.days} days, all assets together`, sign(m.profitPerDay))}
-      ${row("📅", "Days that ended with a loss", `${m.losingDays} of ${m.days}`, m.worstDay ? `the worst lost ${money(m.worstDay.profit)} THB (${m.worstDay.day.slice(8)}/${m.worstDay.day.slice(5, 7)})` : "no losing day")}
+      ${row("📅", "Worst day", m.worstDay ? `${money(m.worstDay.profit)} THB` : "no losing day", m.worstDay ? `on ${longDay(m.worstDay.day)}` : "")}
       ${row("🏦", "Balance to keep", `${money(-m.biggestDrop).replace("+", "")} THB`, "the deepest the total fell from its best point; less than this in the account and a bad run would stop you")}
       ${row("❌", "Rounds that lose all orders", m.fullLossEvery, `each costs ${money(m.worstRound)} THB`)}
       ${row("🔁", "Most rounds open at the same time", `${m.mostAtOnce}`, "across all assets; this much money can be tied up at once")}
-      ${row("⏱️", "How busy the app is", `${m.roundsPerDay.toFixed(0)} rounds a day · ${m.roundsPerHour.toFixed(0)} an hour`, `${m.roundsInGoal ? "✅ inside" : "⚠️ outside"} the goal of ${data.roundsGoal.min}-${data.roundsGoal.max} a day${m.quietMinutes === null ? "" : `; 9 in 10 waits for a new round are ${m.quietMinutes} min or less`}`)}
+      ${row("⏱️", "How busy the app is", `${m.weekdays.roundsPerDay.toFixed(0)} rounds a weekday · ${m.roundsPerHour.toFixed(0)} an hour`, `${m.roundsInGoal ? "✅ inside" : "⚠️ outside"} the goal of ${data.roundsGoal.min}-${data.roundsGoal.max} a weekday${m.quietMinutes === null ? "" : `; 9 in 10 waits for a new round are ${m.quietMinutes} min or less`}`)}
     </div>`;
   }
   render();

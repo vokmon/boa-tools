@@ -1,6 +1,6 @@
 import { SignalEngine } from "@/domain/signal";
 import { BANGKOK_OFFSET_S, simulateRounds, type Round } from "@/domain/backtest/rounds";
-import { summarize, type Summary } from "@/domain/backtest/summary";
+import { groupSplit, summarize, type GroupSplit, type Summary } from "@/domain/backtest/summary";
 import { LEVELS_TO_COMPARE, worstCaseStake } from "@/domain/backtest/martingale";
 import type { LocalCandleCache } from "@/storage/LocalCandleCache";
 import type { RunSetting } from "./settings/settingsFile";
@@ -35,7 +35,23 @@ export interface LevelResult {
   worstRound: number;
   /** Per asset, best first. */
   byAsset: AssetResult[];
+  /** The same for all assets (summary and byAsset above), main assets only and OTC only. */
+  groups: AssetGroups;
 }
+
+export const ASSET_GROUPS = ["total", "main", "otc"] as const;
+export type AssetGroup = (typeof ASSET_GROUPS)[number];
+
+/** One asset group's rounds, on their own. */
+export interface GroupResult {
+  summary: Summary;
+  /** Weekdays, the weekend and the newest 2 weeks. */
+  days: GroupSplit;
+  /** Per asset in the group, best first. */
+  byAsset: AssetResult[];
+}
+
+export type AssetGroups = Record<AssetGroup, GroupResult>;
 
 export interface SettingResult {
   setting: RunSetting;
@@ -45,6 +61,8 @@ export interface SettingResult {
   worstCaseStake: number;
   /** Per asset at the setting's own level, best first. */
   byAsset: AssetResult[];
+  /** Main / OTC / total at the setting's own level. */
+  groups: AssetGroups;
   /** The same signal with max martingale 0 … 4 (and the setting's own level, if different). */
   levels: LevelResult[];
 }
@@ -52,6 +70,8 @@ export interface SettingResult {
 export interface BacktestResult {
   period: BacktestPeriod;
   assets: number;
+  /** Of `assets`, how many are OTC. */
+  otcAssets: number;
   candles: number;
   results: SettingResult[];
 }
@@ -72,6 +92,17 @@ export function bangkokPeriod(utcDays: readonly string[]): BacktestPeriod {
   return { days, from, to };
 }
 
+/** Summary and per-asset results for all assets, and the same for main assets and OTC on their own. */
+function withGroups(rounds: readonly Round[], perAsset: AssetResult[], days: readonly string[], levels: number, hours: readonly boolean[] | undefined, otc: ReadonlySet<number>) {
+  const byAsset = [...perAsset].sort((a, b) => b.profit - a.profit);
+  const group = (keep: (activeId: number) => boolean): GroupResult => {
+    const inGroup = rounds.filter((r) => keep(r.activeId));
+    return { summary: summarize(inGroup, days, levels, hours), days: groupSplit(inGroup, days, levels), byAsset: byAsset.filter((a) => keep(a.activeId)) };
+  };
+  const total: GroupResult = { summary: summarize(rounds, days, levels, hours), days: groupSplit(rounds, days, levels), byAsset };
+  return { summary: total.summary, byAsset, groups: { total, main: group((id) => !otc.has(id)), otc: group((id) => otc.has(id)) } };
+}
+
 /** Levels a setting is played at: 0 … 4, plus its own level if it is outside that. */
 function levelsFor(setting: RunSetting): number[] {
   return [...new Set([...LEVELS_TO_COMPARE, setting.martingale.levels])].sort((a, b) => a - b);
@@ -84,6 +115,7 @@ function levelsFor(setting: RunSetting): number[] {
 export function runBacktest(cache: LocalCandleCache, settings: readonly RunSetting[], size: number, onAsset?: () => void): BacktestResult {
   const period = bangkokPeriod(cache.days(size));
   const assets = cache.assets();
+  const otc = new Set(assets.filter((a) => a.isOtc).map((a) => a.activeId));
   const levels = settings.map(levelsFor);
   // rounds[setting][level index], perAsset[setting][level index]
   const rounds: Round[][][] = settings.map((_, i) => levels[i]!.map(() => []));
@@ -123,16 +155,16 @@ export function runBacktest(cache: LocalCandleCache, settings: readonly RunSetti
   return {
     period,
     assets: assets.length,
+    otcAssets: otc.size,
     candles: candleCount,
     results: settings.map((setting, i) => {
       const views = levels[i]!.map((maxLevel, l): LevelResult => ({
         levels: maxLevel,
-        summary: summarize(rounds[i]![l]!, period.days, maxLevel, setting.hours),
         worstRound: worstCaseStake({ ...setting.martingale, levels: maxLevel }, setting.order),
-        byAsset: perAsset[i]![l]!.sort((a, b) => b.profit - a.profit),
+        ...withGroups(rounds[i]![l]!, perAsset[i]![l]!, period.days, maxLevel, setting.hours, otc),
       }));
       const own = views.find((v) => v.levels === setting.martingale.levels)!;
-      return { setting, summary: own.summary, worstCaseStake: own.worstRound, byAsset: own.byAsset, levels: views };
+      return { setting, summary: own.summary, worstCaseStake: own.worstRound, byAsset: own.byAsset, groups: own.groups, levels: views };
     }),
   };
 }

@@ -9,7 +9,6 @@ import { Progress } from "@/lib/progress";
 import { prepareData, useLocalCopy } from "./data/prepareData";
 import { runBacktest } from "./runBacktest";
 import { loadSettingsFolder, SettingsError, type RunSetting } from "./settings/settingsFile";
-import { resultLines } from "./output/terminal";
 import { writeResultFiles } from "./output/writeFiles";
 import { writeReport } from "./report/renderReport";
 import { reversalEvidence } from "./evidence/reversalEvidence";
@@ -103,9 +102,7 @@ Every setting and number explained: src/tools/backtest/docs/ (settings.md, resul
       const written = await writeResultFiles(dir, run);
       const reportPath = await writeReport(dir, run);
       saved.done(`${dir}/ (${["report.html", ...written].join(", ")})`);
-      console.log(`\n${resultLines(run).join("\n")}\n`);
-      console.log(`   🤖 Next settings to try: paste ${join(dir, "ai-brief.md")} into an AI, save its files in ${settingsDir}`);
-      console.log(`   📊 Report: ${reportPath}\n`);
+      console.log(`\n   📊 Report: ${reportPath}\n`);
     } finally {
       cache.close();
       turso?.close();

@@ -40,7 +40,7 @@ instead of running settings files (see [docs/results.md](docs/results.md)).
 
 | File | For |
 |---|---|
-| `report.html` | open it in a browser: one page with the comparison, a tab per setting, what matters and the explanations from docs/ |
+| `report.html` | open it in a browser. A bar at the top picks what every table shows: assets (Total, Main, OTC) x multiplier x max martingale. Then the comparison, a tab per setting, and the explanations from docs/ |
 | `results.json` | everything, for programs: per setting its values, summary (incl. per-hour and per-day) and per-asset results |
 | `ai-brief.md` | paste into an AI to get the next settings files to try (see below) |
 | `settings/` | every setting of the run as a settings file |

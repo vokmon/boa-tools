@@ -35,24 +35,8 @@ export function hourList(ranges: readonly string[]): string {
   return ranges.length ? ranges.join(", ") : "-";
 }
 
-/** "✅ 55.2% +310/day" or "⚠️ 50.9% -4,321/day": the last 2 weeks' first-order win and profit, and whether they held up. */
-export function checkCell(r: SettingResult): string {
-  const last = r.summary.check.last;
-  return `${r.summary.check.heldUp ? "✅" : "⚠️ "} ${percent(last.firstWinPct)} ${money(last.profitPerDay)}/day`;
-}
-
-/** "✅ 827" inside the rounds-a-day goal, "⚠️ 175" outside it. */
-export function roundsCell(roundsPerDay: number): string {
-  return `${inRoundsGoal(roundsPerDay) ? "✅" : "⚠️ "} ${roundsPerDay.toFixed(0)}`;
-}
-
 export function inRoundsGoal(roundsPerDay: number): boolean {
   return roundsPerDay >= ROUNDS_PER_DAY_GOAL.min && roundsPerDay <= ROUNDS_PER_DAY_GOAL.max;
-}
-
-/** "5 min", or "-" without two rounds to measure. */
-export function quietCell(minutes: number | null): string {
-  return minutes === null ? "-" : `${minutes} min`;
 }
 
 /** Finished rounds (won + lost), the base for the "won at level" shares. */

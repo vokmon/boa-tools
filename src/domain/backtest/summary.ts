@@ -71,8 +71,70 @@ export interface Summary {
   goodHours: string[];
   avoidHours: string[];
   daily: { day: string; rounds: number; profit: number }[];
+  /** Week by week (weeks start on Monday, Bangkok time): does the first-order win hold over time? */
+  weekly: { week: string; rounds: number; firstWinPct: number }[];
   /** The last 2 weeks against the days before them. */
   check: { before: PeriodStat; last: PeriodStat; heldUp: boolean };
+}
+
+/** Rounds per day, first-order win and profit per day of some rounds, over some days. */
+export interface GroupStat {
+  days: number;
+  roundsPerDay: number;
+  firstWinPct: number;
+  /** Share of finished rounds won by the first order, martingale 1 … levels, then lost all, in percent. */
+  ends: number[];
+  profitPerDay: number;
+}
+
+/**
+ * One asset group (or all assets) on weekdays and at the weekend (Bangkok calendar days), and the
+ * newest 2 weeks. Main assets almost stop at the weekend, so an average over all days hides how
+ * busy a setting is on a normal trading day.
+ */
+export interface GroupSplit {
+  weekdays: GroupStat;
+  weekend: GroupStat;
+  last2Weeks: GroupStat;
+}
+
+/** Saturday or Sunday, for a Bangkok day "yyyy-mm-dd". */
+export function isWeekend(day: string): boolean {
+  const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
+  return weekday === 0 || weekday === 6;
+}
+
+/** The split of some rounds over the test days; rounds outside the days are ignored. */
+export function groupSplit(rounds: readonly Round[], days: readonly string[], levels: number): GroupSplit {
+  const dayNumber = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86_400_000;
+  const index = new Map(days.map((d, i) => [dayNumber(d), i]));
+  const weekend = days.map(isWeekend);
+  const checkSplit = Math.max(0, days.length - CHECK_DAYS);
+  const buckets = { weekdays: [] as Round[], weekend: [] as Round[], last2Weeks: [] as Round[] };
+  for (const r of rounds) {
+    const i = index.get(Math.floor((r.start + BANGKOK_OFFSET_S) / 86_400));
+    if (i === undefined) continue;
+    (weekend[i] ? buckets.weekend : buckets.weekdays).push(r);
+    if (i >= checkSplit) buckets.last2Weeks.push(r);
+  }
+  const weekendDays = weekend.filter(Boolean).length;
+  return {
+    weekdays: groupStat(buckets.weekdays, days.length - weekendDays, levels),
+    weekend: groupStat(buckets.weekend, weekendDays, levels),
+    last2Weeks: groupStat(buckets.last2Weeks, days.length - checkSplit, levels),
+  };
+}
+
+function groupStat(rounds: readonly Round[], days: number, levels: number): GroupStat {
+  const finished = rounds.filter((r) => r.wonAt !== STOPPED);
+  const share = (count: number) => (finished.length ? (count / finished.length) * 100 : 0);
+  return {
+    days,
+    roundsPerDay: days ? rounds.length / days : 0,
+    firstWinPct: share(finished.filter((r) => r.wonAt === 0).length),
+    ends: [...Array.from({ length: levels + 1 }, (_, level) => share(finished.filter((r) => r.wonAt === level).length)), share(finished.filter((r) => r.wonAt === LOST).length)],
+    profitPerDay: days ? sum(rounds.map((r) => r.profit)) / days : 0,
+  };
 }
 
 /**
@@ -127,9 +189,26 @@ export function summarize(rounds: readonly Round[], days: readonly string[], lev
     goodHours: hourRanges(hourStat, "good"),
     avoidHours: hourRanges(hourStat, "avoid"),
     daily,
+    weekly: weeklyStats(finished, days, dayOf),
     // Held up: the last 2 weeks still made money, at least half as much per round as before
     check: { before, last, heldUp: last.profitPerRound > 0 && last.profitPerRound >= before.profitPerRound * 0.5 },
   };
+}
+
+/** First-order win per week; a week is named by its Monday, and the first may start mid-week. */
+function weeklyStats(finished: readonly Round[], days: readonly string[], dayOf: (r: Round) => number | undefined): Summary["weekly"] {
+  const mondayOf = (day: string) => {
+    const t = Date.parse(`${day}T00:00:00Z`);
+    return new Date(t - ((new Date(t).getUTCDay() + 6) % 7) * 86_400_000).toISOString().slice(0, 10);
+  };
+  const weeks = new Map<string, { rounds: number; firstWon: number }>();
+  for (const d of days) if (!weeks.has(mondayOf(d))) weeks.set(mondayOf(d), { rounds: 0, firstWon: 0 });
+  for (const r of finished) {
+    const w = weeks.get(mondayOf(days[dayOf(r)!]!))!;
+    w.rounds++;
+    if (r.wonAt === 0) w.firstWon++;
+  }
+  return [...weeks].map(([week, w]) => ({ week, rounds: w.rounds, firstWinPct: w.rounds ? (w.firstWon / w.rounds) * 100 : 0 }));
 }
 
 function periodStat(inDays: readonly Round[], days: number): PeriodStat {

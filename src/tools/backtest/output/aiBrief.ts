@@ -20,10 +20,9 @@ export function aiBrief(run: BacktestResult): string {
     return [
       r.setting.label,
       changesFromBot(r.setting.values).join("; ") || "(the bot's current settings)",
-      `${s.roundsPerDay.toFixed(0)}${inRoundsGoal(s.roundsPerDay) ? "" : " (outside the goal)"}`,
+      `${r.groups.total.days.weekdays.roundsPerDay.toFixed(0)}${inRoundsGoal(r.groups.total.days.weekdays.roundsPerDay) ? "" : " (outside the goal)"}`,
       s.roundsPerHour.toFixed(0),
       percent(s.firstWinPct, 2),
-      percent(s.roundWinPct, 2),
       Array.from({ length: levels }, (_, l) => share(s.wonAtLevel[l + 1] ?? 0, finished)).join(" / "),
       share(s.lost, finished),
       money(s.profitPerDay),
@@ -50,7 +49,7 @@ export function aiBrief(run: BacktestResult): string {
     "I want a **compromise** setting that makes money across all assets per day, not one that never loses: losing rounds",
     "are fine when the other rounds cover them. Targets:",
     "- **first order wins more than the break-even below** (54.1% at 85% payout): the one number that decides profit",
-    "- **600-1000 rounds a day**, all assets together (about 25-42 an hour; the bot trades ~830 today). About 3 in 4",
+    "- **600-1000 rounds a weekday**, all assets together (about 25-42 an hour; the bot trades ~880 today). About 3 in 4",
     "  rounds are on OTC assets today; main assets have ~43,000 candles a day, so the goal does not need OTC",
     "- **max martingale 4 or less** (more is too risky)",
     "- **tested at martingale x2.5 and x2.2**: put `\"multiplier\": [2.5, 2.2]` in every file you suggest",
@@ -79,8 +78,22 @@ export function aiBrief(run: BacktestResult): string {
     "## Results so far",
     "",
     table(
-      ["Setting", "Changed from the bot", "Rounds/day", "Rounds/hour", "First-order win", "Won at any level", `Won at L1 / … / L${levels}`, "Lost all", "Profit/day", "Losing days", "Worst day", "Biggest drop", "First-order win and profit/day: earlier → last 2 weeks", "Good hours", "Avoid hours"],
+      ["Setting", "Changed from the bot", "Rounds/weekday", "Rounds/hour", "First-order win", `Won at L1 / … / L${levels}`, "Lost all", "Profit/day", "Losing days", "Worst day", "Biggest drop", "First-order win and profit/day: earlier → last 2 weeks", "Good hours", "Avoid hours"],
       resultRows,
+    ),
+    "",
+    "Main assets and OTC on their own, per weekday and per weekend day (Saturday and Sunday, Bangkok time); main assets",
+    "almost stop at the weekend, OTC is open all the time:",
+    "",
+    table(
+      ["Setting", "Group", "Rounds/weekday", "Rounds/weekend day", "First-order win weekday", "weekend", "newest 2 weeks", "Profit/weekday", "Profit/weekend day"],
+      rows.flatMap((r) =>
+        (["total", "main", "otc"] as const).map((key) => {
+          const g = r.groups[key].days;
+          const first = (stat: { roundsPerDay: number; firstWinPct: number }) => (stat.roundsPerDay > 0 ? percent(stat.firstWinPct, 2) : "-");
+          return [r.setting.label, { total: "Total", main: "Main", otc: "OTC" }[key], g.weekdays.roundsPerDay.toFixed(0), g.weekend.roundsPerDay.toFixed(0), first(g.weekdays), first(g.weekend), first(g.last2Weeks), money(g.weekdays.profitPerDay), money(g.weekend.profitPerDay)];
+        }),
+      ),
     ),
     "",
     "Profit per day of the same signal at each martingale level (0 = no martingale):",

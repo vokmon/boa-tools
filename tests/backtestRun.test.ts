@@ -46,7 +46,7 @@ describe("martingale levels", () => {
     expect(own.summary.rounds).toBe(result!.summary.rounds);
     expect(own.summary.profitPerDay).toBeCloseTo(result!.summary.profitPerDay, 6);
     // No martingale: one order per round, a lost round costs one stake
-    expect(result!.levels[0]!.worstRound).toBe(10);
+    expect(result!.levels[0]!.worstRound).toBe(30);
     const none = result!.levels[0]!.summary;
     expect(none.roundWinPct).toBeCloseTo(((none.wonAtLevel[0] ?? 0) / (none.rounds - none.stopped)) * 100, 6);
     expect(none.wonAtLevel).toHaveLength(1);

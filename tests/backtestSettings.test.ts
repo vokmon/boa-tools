@@ -10,7 +10,7 @@ describe("parseSettingsFile", () => {
     const [s] = parseSettingsFile("bot-current", {});
     expect(s!.signal).toEqual(DEFAULT_SIGNAL_SETTINGS);
     expect(s!.martingale).toEqual({ type: "standard", multiplier: 2.5, levels: 4 });
-    expect(s!.order).toEqual({ amount: 10, payout: 85 });
+    expect(s!.order).toEqual({ amount: 30, payout: 85 });
     expect(s!.label).toBe("bot-current");
     expect(s!.hours).toBeUndefined();
   });

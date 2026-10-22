@@ -30,6 +30,8 @@ export async function writeResultFiles(dir: string, run: BacktestResult): Promis
       values: r.setting.values,
       worstCaseStake: r.worstCaseStake,
       summary: r.summary,
+      // Main and OTC on their own; per-asset results are in byAsset already
+      groups: Object.fromEntries(Object.entries(r.groups).map(([key, g]) => [key, { summary: g.summary, days: g.days }])),
       byAsset: r.byAsset,
     })),
   };

@@ -47,7 +47,7 @@ export const NUMBER_FIELDS: readonly NumberField[] = [
   { path: "volume.lookback", about: "candles before the signal candle the average volume is taken over", integer: true, min: 1, max: 99, tryRange: [10, 60], signal: ["volumeLookback"] },
   { path: "martingale.multiplier", about: "standard martingale: each level stakes this times the previous one", integer: false, min: 1, max: 10, tryRange: [2, 3] },
   { path: "martingale.levels", about: "martingale levels after the first order (4 = up to 5 orders per round)", integer: true, min: 0, max: 8, tryRange: [2, 4] },
-  { path: "order.amount", about: "stake of the first order, THB", integer: false, min: 1, max: 1_000_000, tryRange: [10, 10] },
+  { path: "order.amount", about: "stake of the first order, THB (IQ Option takes 30 at least)", integer: false, min: 30, max: 1_000_000, tryRange: [30, 30] },
   { path: "order.payout", about: "profit on a win, percent of the stake", integer: false, min: 1, max: 100, tryRange: [80, 90] },
 ];
 

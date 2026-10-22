@@ -12,16 +12,15 @@ export interface GuideEntry {
 
 export const RESULT_GUIDE: readonly GuideEntry[] = [
   { name: "Round", text: "One signal and its orders: the first order on the next candle, then one martingale level after each loss, until an order wins or the last level loses." },
-  { name: "Rounds per day", text: "How many rounds started per day, all assets together. Stricter settings give fewer rounds. The goal is 600-1000: fewer and the app looks idle, more and it orders almost every minute." },
+  { name: "Rounds per day", text: "How many rounds started per day, all assets together. Stricter settings give fewer rounds. The goal is 600-1000 on a weekday: fewer and the app looks idle, more and it orders almost every minute." },
+  { name: "Main / OTC / Total", text: "Every number for all assets together, for main assets and for OTC on their own, on weekdays and at the weekend (Saturday and Sunday, Bangkok time), so an edge on one group is not hidden by the other. Main assets almost stop at the weekend (only crypto trades); OTC is open all the time." },
   { name: "Rounds per hour", text: "Rounds per hour the setting trades (all day, or only its hours). 25-42 an hour is the goal of 600-1000 a day." },
   { name: "Quiet stretch", text: "How long the app waits for a new round: 9 in 10 waits between new rounds (on any asset) are this long or shorter. A break outside the setting's hours does not count." },
   { name: "First-order win", text: "How often the first order wins: the one number that decides profit. At a payout of 85% it must be above 54.05% to make money; martingale does not change that, it only moves the losses into rare lost rounds." },
-  { name: "Won at any level", text: "Rounds that ended with a win at any martingale level. It is high even for a bad setting (about 97% for a coin flip with 4 levels), because martingale keeps trying; it says nothing about profit." },
   { name: "First order, Martingale 1 … 4", text: "Which order won the round: the first order (no martingale), or martingale 1, 2, 3 or 4 after that many losses in a row. Later martingale orders use bigger stakes, so they earn more when they win but cost more to reach." },
-  { name: "Lost all", text: "Rounds where every order lost. Each one costs the whole stack of stakes (644 THB with 10 THB orders, 2.5x, 4 levels), so a few of them can wipe out many wins." },
+  { name: "Lost all", text: "Rounds where every order lost. Each one costs the whole stack of stakes (1,933 THB with a 30 THB first order, 2.5x, 4 levels), so a few of them can wipe out many wins." },
   { name: "Profit", text: "Money won minus money lost over all rounds of all assets, in THB, with the order size and payout in the settings." },
   { name: "Profit per day", text: "Profit divided by the number of days tested." },
-  { name: "Losing days", text: "Days (Bangkok time) that ended with a loss, out of all days tested." },
   { name: "Worst day", text: "The day with the biggest loss." },
   { name: "Biggest drop", text: "The deepest fall of the running total from a high point. Roughly the balance you need so a bad stretch does not end the session." },
   { name: "Most at once", text: "The most rounds running at the same moment across all assets: how much money can be tied up at once." },
@@ -29,7 +28,8 @@ export const RESULT_GUIDE: readonly GuideEntry[] = [
   { name: "Worst round", text: "The money lost when every order of one round loses." },
   { name: "When to trade", text: "Rounds grouped by the Bangkok hour they started. Green hours earned at least the average per round, teal ones earned less, red ones lost money; grey hours had fewer than 100 rounds, too few to judge." },
   { name: "Martingale levels", text: "The same signal played with no martingale, or with at most 1, 2, 3 or 4 martingale orders after the first. The switch at the top shows the whole report at one of these; the best level is the one with the most profit per day. Fewer levels lose a round more often, but each lost round costs far less." },
-  { name: "Last 2 weeks", text: "The newest 14 days on their own, compared with the days before them: first-order win and profit per day. ✅ still made money there; ⚠️ did much worse, so a good result on the older days may have been luck. Keep the newest 2 weeks for checking a setting rather than choosing it." },
+  { name: "Last 2 weeks", text: "The newest 14 days on their own: the first-order win there. ✅ still above break-even; ❌ not, so a good result on the older days may have been luck. Keep the newest 2 weeks for checking a setting rather than choosing it." },
+  { name: "Week by week", text: "The first-order win of each week (weeks start on Monday), against the break-even line. An edge worth trading stays above the line week after week; one or two good weeks can be luck." },
 ];
 
 export interface SettingGroup {

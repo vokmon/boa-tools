@@ -11,16 +11,15 @@ traded on. Orders are simulated as buying at the candle's open and settling at i
 ## What the numbers mean
 
 - **Round**: One signal and its orders: the first order on the next candle, then one martingale level after each loss, until an order wins or the last level loses.
-- **Rounds per day**: How many rounds started per day, all assets together. Stricter settings give fewer rounds. The goal is 600-1000: fewer and the app looks idle, more and it orders almost every minute.
+- **Rounds per day**: How many rounds started per day, all assets together. Stricter settings give fewer rounds. The goal is 600-1000 on a weekday: fewer and the app looks idle, more and it orders almost every minute.
+- **Main / OTC / Total**: Every number for all assets together, for main assets and for OTC on their own, on weekdays and at the weekend (Saturday and Sunday, Bangkok time), so an edge on one group is not hidden by the other. Main assets almost stop at the weekend (only crypto trades); OTC is open all the time.
 - **Rounds per hour**: Rounds per hour the setting trades (all day, or only its hours). 25-42 an hour is the goal of 600-1000 a day.
 - **Quiet stretch**: How long the app waits for a new round: 9 in 10 waits between new rounds (on any asset) are this long or shorter. A break outside the setting's hours does not count.
 - **First-order win**: How often the first order wins: the one number that decides profit. At a payout of 85% it must be above 54.05% to make money; martingale does not change that, it only moves the losses into rare lost rounds.
-- **Won at any level**: Rounds that ended with a win at any martingale level. It is high even for a bad setting (about 97% for a coin flip with 4 levels), because martingale keeps trying; it says nothing about profit.
 - **First order, Martingale 1 … 4**: Which order won the round: the first order (no martingale), or martingale 1, 2, 3 or 4 after that many losses in a row. Later martingale orders use bigger stakes, so they earn more when they win but cost more to reach.
-- **Lost all**: Rounds where every order lost. Each one costs the whole stack of stakes (644 THB with 10 THB orders, 2.5x, 4 levels), so a few of them can wipe out many wins.
+- **Lost all**: Rounds where every order lost. Each one costs the whole stack of stakes (1,933 THB with a 30 THB first order, 2.5x, 4 levels), so a few of them can wipe out many wins.
 - **Profit**: Money won minus money lost over all rounds of all assets, in THB, with the order size and payout in the settings.
 - **Profit per day**: Profit divided by the number of days tested.
-- **Losing days**: Days (Bangkok time) that ended with a loss, out of all days tested.
 - **Worst day**: The day with the biggest loss.
 - **Biggest drop**: The deepest fall of the running total from a high point. Roughly the balance you need so a bad stretch does not end the session.
 - **Most at once**: The most rounds running at the same moment across all assets: how much money can be tied up at once.
@@ -28,7 +27,8 @@ traded on. Orders are simulated as buying at the candle's open and settling at i
 - **Worst round**: The money lost when every order of one round loses.
 - **When to trade**: Rounds grouped by the Bangkok hour they started. Green hours earned at least the average per round, teal ones earned less, red ones lost money; grey hours had fewer than 100 rounds, too few to judge.
 - **Martingale levels**: The same signal played with no martingale, or with at most 1, 2, 3 or 4 martingale orders after the first. The switch at the top shows the whole report at one of these; the best level is the one with the most profit per day. Fewer levels lose a round more often, but each lost round costs far less.
-- **Last 2 weeks**: The newest 14 days on their own, compared with the days before them: first-order win and profit per day. ✅ still made money there; ⚠️ did much worse, so a good result on the older days may have been luck. Keep the newest 2 weeks for checking a setting rather than choosing it.
+- **Last 2 weeks**: The newest 14 days on their own: the first-order win there. ✅ still above break-even; ❌ not, so a good result on the older days may have been luck. Keep the newest 2 weeks for checking a setting rather than choosing it.
+- **Week by week**: The first-order win of each week (weeks start on Monday), against the break-even line. An edge worth trading stays above the line week after week; one or two good weeks can be luck.
 
 ## Reversal evidence (`--evidence`)
 

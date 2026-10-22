@@ -6,7 +6,7 @@ judged by are in [goals.md](goals.md); what we test next is in [plan.md](plan.md
 ## 24/08-21/10/2026
 
 - The bot's current settings: the first order wins **50.6%**, the same as a random candle; the
-  martingale turns that into 97% won rounds but loses about 4,400 THB a day (10 THB orders).
+  martingale turns that into 97% won rounds but loses about 13,300 THB a day (30 THB orders).
 - Of about 2,600 combinations of zone, stochastic level, candle rules and volume, plus 26 built from
   reversal ideas (stretched, long same-colour run, big last candle, at the high/low, solid last push),
   the ones with 600+ rounds a day all stay at **50-51%**: they change how often the bot trades, not how
@@ -55,5 +55,9 @@ judged by are in [goals.md](goals.md); what we test next is in [plan.md](plan.md
   only**, and a main-only setting is nearly idle from Saturday morning to Monday morning; its rounds a
   day should be judged on weekdays.
 - With a below-break-even first order, every martingale level loses more; no martingale loses least.
+- **Margin of error matters.** The bot's main assets at the weekend won 55.8% on the first order, but
+  on only 725 rounds: ±3.6, so the true rate is somewhere between 52.2% and 59.4%. Too few rounds to
+  call it an edge. Every other group of the bot is surely below break-even (e.g. all assets 50.6%
+  ±0.4).
 - How busy the bot's current settings feel: 26-41 rounds an hour depending on the hour, a new round
   about every 2 minutes (9 in 10 gaps 5 minutes or less), no order open about a third of the time.

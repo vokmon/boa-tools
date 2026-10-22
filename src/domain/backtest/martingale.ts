@@ -21,7 +21,8 @@ export interface OrderSettings {
 export const LEVELS_TO_COMPARE: readonly number[] = [0, 1, 2, 3, 4];
 
 export const DEFAULT_MARTINGALE: Readonly<MartingaleSettings> = Object.freeze({ type: "standard", multiplier: 2.5, levels: 4 });
-export const DEFAULT_ORDER: Readonly<OrderSettings> = Object.freeze({ amount: 10, payout: 85 });
+/** 30 THB is the smallest order IQ Option takes. */
+export const DEFAULT_ORDER: Readonly<OrderSettings> = Object.freeze({ amount: 30, payout: 85 });
 
 /** iq-robot rounds recovery stakes up to the cent so a win never falls short. */
 function roundUpTo2(value: number): number {
