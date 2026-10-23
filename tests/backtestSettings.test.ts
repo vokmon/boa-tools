@@ -57,6 +57,11 @@ describe("parseSettingsFile", () => {
     );
   });
 
+  test("volume is no longer a setting, and the first order is at least IQ Option's 30 THB", () => {
+    expect(() => parseSettingsFile("old", { volume: { minVsAverage: 2 } })).toThrow('unknown setting "volume"');
+    expect(() => parseSettingsFile("small", { order: { amount: 10 } })).toThrow('"order.amount" must be between 30');
+  });
+
   test("hours", () => {
     const morning = parseHours(["07-11"]).allowed;
     expect(morning.map((a, h) => (a ? h : -1)).filter((h) => h >= 0)).toEqual([7, 8, 9, 10]);

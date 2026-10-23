@@ -36,7 +36,7 @@ Every candle with a colour is a possible reversal bet: a PUT after a green candl
 one. `--evidence` measures how often the next candle really reverses, grouped by each piece of
 evidence on its own: the bot's signal, same colour in a row, stochastic, position in the box,
 Bollinger band, Donchian breakout, body share, wick against the move, size vs the average body,
-volume, the asset's recent reversals, hour, and each asset. Every table shows candles per day, the
+the asset's recent reversals, hour, and each asset. Every table shows candles per day, the
 reversal rate for all assets, OTC and main, and for the older days and the newest 2 weeks. **Lasts**
 ✅ marks a group above break-even (54.05%) on both. The bot's signal row is a check: it matches the
 backtest's first-order win. Writes `evidence.md` and `evidence.json`; takes ~10 s.

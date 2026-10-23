@@ -7,7 +7,7 @@ export interface Candle {
   min: number;
   /** High. */
   max: number;
-  /** Traded volume; IQ Option reports 0 for OTC assets. Only the optional volume rule reads it. */
+  /** Traded volume; IQ Option reports 0 for OTC assets. Stored with the candles, not used by the signal. */
   volume?: number;
 }
 

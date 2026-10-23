@@ -32,10 +32,13 @@ judged by are in [goals.md](goals.md); what we test next is in [plan.md](plan.md
   chance. About 3 in 4 of the bot's rounds today are on OTC.
 - **Main assets lean toward reversing**, and carry volume: it is filled in on 83% of main-asset
   candles (2.79 M of 3.36 M). Some main assets have none at all (e.g. AMAZON-op is 0 on every candle),
-  and `"withoutVolume": "skip"` skips those too. A solid candle with no wick against the move reversed
-  53.4%. A long rejection wick reversed 49.0%, worse than random, so the classic rejection wick does
-  not work here. A **volume spike** with the signal is the strongest
-  edge so far: 53.9% at 89 rounds a day (56.1% in the newest 2 weeks), and 55-60% at 9-50 rounds a day.
+  and the volume rule skipped those too. A solid candle with no wick against the move reversed 53.4%. A
+  long rejection wick reversed 49.0%, worse than random, so the classic rejection wick does not work
+  here. A **volume spike** with the signal was the strongest edge: 53.9% at 89 rounds a day (56.1% in
+  the newest 2 weeks), and 55-60% at 9-50 rounds a day.
+- **Volume dropped (23/10/2026).** Only main assets have it, and it made too little difference to build
+  on (one setting near break-even at ~90 rounds a day). The signal is tuned with the candles' shape and
+  size instead; the stored candles keep their volume.
 - **The edge shrinks as rounds grow**: on main assets 53.9% at 89 a day, 52.4% at ~150, 51.9% at ~900.
 - Main assets have about 43,000 candles a day, so 600 rounds a day needs about 1 in 70 of them: the
   rounds goal does not depend on OTC. Main assets only trade in market hours (see below).

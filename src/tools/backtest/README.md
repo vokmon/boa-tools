@@ -22,10 +22,18 @@ bun run backtest --all --local       # use the local copy as it is (no Turso, no
 bun run backtest --evidence          # reversal evidence instead of settings
 ```
 
-Every run first brings Turso up to date from IQ Option (every day the broker still has, up to now)
-and updates the local copy (`DATA_DIR`); the backtest then uses all complete days. Each setting is
-played at max martingale 0 to 4. A few settings take ~30 s. `--local` skips the update, and needs
-no IQ Option or Turso values in `.env` (e.g. when Turso's monthly write limit is used up).
+Every run first keeps the local copy (`DATA_DIR`) and Turso in sync, in three steps shown in the
+terminal:
+
+1. **IQ Option → local copy + Turso**: every asset-day in neither place is fetched (every day the
+   broker still has, up to now; today's candles so far go to Turso only). Each day is saved locally
+   first. When Turso's monthly write limit is used up, the run says so and saves to the local copy only.
+2. **Turso → local copy**: days only Turso has (e.g. from the daily Supabase job), or changed there.
+3. **Local copy → Turso**: days only the local copy has, saved while Turso refused writes, oldest
+   first, once Turso accepts writes again (the limit resets on the 1st of the month).
+
+The backtest then uses all complete days. Each setting is played at max martingale 0 to 4. A few
+settings take ~30 s. `--local` skips all three steps and needs no IQ Option or Turso values in `.env`.
 
 `--evidence` measures how often the next candle reverses after each piece of reversal evidence,
 instead of running settings files (see [docs/results.md](docs/results.md)).

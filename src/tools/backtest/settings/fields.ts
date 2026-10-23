@@ -42,9 +42,6 @@ export const NUMBER_FIELDS: readonly NumberField[] = [
   { path: "candle.minSizeVsAverage", about: "the latest candles' bodies must each be at least this times the recent average body", integer: false, min: 0, max: 5, tryRange: [0.5, 1.5], signal: ["minCandleSizeRatio"] },
   { path: "candle.sizeCandles", about: "how many latest candles the size rule applies to", integer: true, min: 1, max: 10, tryRange: [1, 5], signal: ["candlesToCheckSize"] },
   { path: "candle.sizeLookback", about: "candles the average body is taken over, before the latest ones", integer: true, min: 5, max: 90, tryRange: [20, 60], signal: ["sizeLookback"] },
-  { path: "volume.minVsAverage", about: "the signal candle's volume must be at least this times the average of the candles before it (0 = off)", integer: false, min: 0, max: 20, tryRange: [1, 3], signal: ["volumeMinRatio"] },
-  { path: "volume.maxVsAverage", about: "the signal candle's volume must be at most this times that average (0 = off)", integer: false, min: 0, max: 20, tryRange: [0.5, 1], signal: ["volumeMaxRatio"] },
-  { path: "volume.lookback", about: "candles before the signal candle the average volume is taken over", integer: true, min: 1, max: 99, tryRange: [10, 60], signal: ["volumeLookback"] },
   { path: "martingale.multiplier", about: "standard martingale: each level stakes this times the previous one", integer: false, min: 1, max: 10, tryRange: [2, 3] },
   { path: "martingale.levels", about: "martingale levels after the first order (4 = up to 5 orders per round)", integer: true, min: 0, max: 8, tryRange: [2, 4] },
   { path: "order.amount", about: "stake of the first order, THB (IQ Option takes 30 at least)", integer: false, min: 30, max: 1_000_000, tryRange: [30, 30] },
@@ -56,5 +53,4 @@ export const FIELD_BY_PATH = new Map(NUMBER_FIELDS.map((f) => [f.path, f]));
 /** Settings that are a choice between words; the first value is the default. */
 export const CHOICE_FIELDS: Readonly<Record<string, readonly string[]>> = {
   "martingale.type": ["standard", "recovery"],
-  "volume.withoutVolume": ["trade", "skip"],
 };

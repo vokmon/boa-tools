@@ -25,9 +25,6 @@ export class SignalEngine {
   private readonly highs: Float64Array;
   private readonly lows: Float64Array;
   private readonly bodies: Float64Array;
-  /** Running total of volume: sum of volumes before index i is volumeSums[i]. */
-  private readonly volumeSums: Float64Array;
-  private readonly volumes: Float64Array;
   /** Candles in a row, ending at each index, with no time gap between them. */
   private readonly contiguous: Int32Array;
   private readonly cache = new Map<string, unknown>();
@@ -46,9 +43,6 @@ export class SignalEngine {
     this.highs = Float64Array.from(candles, (c) => c.max);
     this.lows = Float64Array.from(candles, (c) => c.min);
     this.bodies = Float64Array.from(candles, (c) => Math.abs(c.close - c.open));
-    this.volumes = Float64Array.from(candles, (c) => c.volume ?? 0);
-    this.volumeSums = new Float64Array(n + 1);
-    for (let i = 0; i < n; i++) this.volumeSums[i + 1] = this.volumeSums[i]! + this.volumes[i]!;
     this.contiguous = new Int32Array(n);
     for (let i = 0; i < n; i++) {
       this.contiguous[i] = i > 0 && this.from[i]! - this.from[i - 1]! === size ? this.contiguous[i - 1]! + 1 : 1;
@@ -63,9 +57,6 @@ export class SignalEngine {
     if (w < MIN_CANDLES || w < s.bollingerPeriod || w < s.stochasticKPeriod + s.stochasticDPeriod - 1 || w < s.donchianPeriod) return out;
     // Breakout compares with the previous candle's channel, which must also be inside the window
     const hasPreviousChannel = w - 2 >= s.donchianPeriod - 1;
-    // The volume average must come from candles inside the window, before the signal candle
-    const volumeOn = s.volumeMinRatio > 0 || s.volumeMaxRatio > 0 || s.withoutVolume === "skip";
-    if (volumeOn && s.volumeLookback > w - 1) return out;
 
     // Every indicator looked up once per call, not per candle
     const res = this.resistance(s.supportResistancePeriod);
@@ -104,7 +95,7 @@ export class SignalEngine {
       if (overbought && high > bands.upper[e]! && hasPreviousChannel && high > channelHigh[e - 1]! && inRow >= s.consecutiveCandles) {
         const mid = (res.value[e]! + sup.value[e]!) / 2;
         const upperZone = res.value[e]! - mid;
-        put = upperZone > 0 && (high - mid) / upperZone >= s.zonePositionThreshold && this.shapeOk(e, start, s, true) && this.sizeOk(e, start, s) && (!volumeOn || this.volumeOk(e, s));
+        put = upperZone > 0 && (high - mid) / upperZone >= s.zonePositionThreshold && this.shapeOk(e, start, s, true) && this.sizeOk(e, start, s);
       }
       if (put) {
         out[e] = PUT;
@@ -113,9 +104,7 @@ export class SignalEngine {
       if (oversold && low < bands.lower[e]! && hasPreviousChannel && low < channelLow[e - 1]! && inRow <= -s.consecutiveCandles) {
         const mid = (res.value[e]! + sup.value[e]!) / 2;
         const lowerZone = mid - sup.value[e]!;
-        if (lowerZone > 0 && (mid - low) / lowerZone >= s.zonePositionThreshold && this.shapeOk(e, start, s, false) && this.sizeOk(e, start, s) && (!volumeOn || this.volumeOk(e, s))) {
-          out[e] = CALL;
-        }
+        if (lowerZone > 0 && (mid - low) / lowerZone >= s.zonePositionThreshold && this.shapeOk(e, start, s, false) && this.sizeOk(e, start, s)) out[e] = CALL;
       }
     }
     return out;
@@ -165,20 +154,6 @@ export class SignalEngine {
     for (let i = e - n + 1; i <= e; i++) {
       if (!(this.bodies[i]! >= minimum)) return false;
     }
-    return true;
-  }
-
-  /**
-   * The signal candle's volume against the average of the `volumeLookback` candles before it.
-   * Without volume (the average is 0, as on OTC assets) the rule is ignored or blocks the trade.
-   */
-  private volumeOk(e: number, s: SignalSettings): boolean {
-    const n = s.volumeLookback;
-    const average = (this.volumeSums[e]! - this.volumeSums[e - n]!) / n;
-    if (!(average > 0)) return s.withoutVolume === "trade";
-    const ratio = this.volumes[e]! / average;
-    if (s.volumeMinRatio > 0 && !(ratio >= s.volumeMinRatio)) return false;
-    if (s.volumeMaxRatio > 0 && !(ratio <= s.volumeMaxRatio)) return false;
     return true;
   }
 

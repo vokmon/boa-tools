@@ -52,6 +52,14 @@ const SCHEMA = [
   ) WITHOUT ROWID`,
 ];
 
+/**
+ * Turso refuses writes once the free plan's monthly write limit is used up ("SQL write operations
+ * are forbidden (writes are blocked...)"); reads still work. Retrying does not help until the 1st.
+ */
+export function isWriteBlocked(error: unknown): boolean {
+  return /writes are blocked|write operations are forbidden/i.test((error as Error)?.message ?? String(error));
+}
+
 /** 11 columns per candle; 80 rows keeps each statement under SQLite's 999-parameter limit. */
 const ROWS_PER_INSERT = 80;
 
@@ -116,7 +124,7 @@ export class CandleDb {
       args: [activeId, size, input.day, input.status, input.candles.length, input.collectedAt.toISOString()],
     });
     // A batch is one transaction, so retrying after a dropped connection cannot write it twice
-    await retry(() => this.db.batch(statements, "write"), { label: `save ${activeId} ${input.day}` });
+    await retry(() => this.db.batch(statements, "write"), { label: `save ${activeId} ${input.day}`, shouldRetry: (error) => !isWriteBlocked(error) });
   }
 
   /** Every complete asset-day with when it was collected; a newer collectedAt means the day changed. */
@@ -126,6 +134,25 @@ export class CandleDb {
       args: [size],
     });
     return rows.map((r) => ({ activeId: Number(r.active_id), day: String(r.day), candleCount: Number(r.candle_count), collectedAt: String(r.collected_at) }));
+  }
+
+  /** The full candles of one asset in [fromTs, toTs), oldest first; a primary-key range scan. */
+  async rawCandles(activeId: number, size: number, fromTs: number, toTs: number): Promise<RawCandle[]> {
+    const { rows } = await this.db.execute({
+      sql: "SELECT id, from_ts, to_ts, open, close, min, max, volume, at FROM candles WHERE active_id = ? AND size = ? AND from_ts >= ? AND from_ts < ? ORDER BY from_ts",
+      args: [activeId, size, fromTs, toTs],
+    });
+    return rows.map((r) => ({
+      id: Number(r.id),
+      from: Number(r.from_ts),
+      to: Number(r.to_ts),
+      open: Number(r.open),
+      close: Number(r.close),
+      min: Number(r.min),
+      max: Number(r.max),
+      volume: Number(r.volume),
+      at: r.at === null ? undefined : Number(r.at),
+    }));
   }
 
   /** Only the fields the backtest uses, for one asset in [fromTs, toTs); a primary-key range scan. */

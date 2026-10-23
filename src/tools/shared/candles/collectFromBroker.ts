@@ -6,9 +6,12 @@ import type { CandleDb, StoredAsset } from "@/storage/CandleDb";
 import { logger } from "@/lib/logger";
 import { CandleCollector, lineEvents, type CollectEvents, type CollectSummary } from "./CandleCollector";
 
+/** Where collected candles go: Turso itself (collect-candles), or Turso and the local copy (backtest). */
+export type CandleStore = Pick<CandleDb, "upsertAssets" | "listAssets" | "completeDays" | "saveDay">;
+
 export interface CollectFromBrokerInput {
   iqEnv: IqOptionEnv;
-  db: CandleDb;
+  db: CandleStore;
   /** UTC days, yyyy-mm-dd. */
   days: readonly string[];
   size: number;

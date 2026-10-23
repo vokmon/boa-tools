@@ -21,10 +21,10 @@ export interface SyncEvents {
   request(): void;
 }
 
-/** Copies complete asset-days from Turso into the local cache; only new or changed days are read. */
+/** Copies complete asset-days from Turso into the local copy, in full; only new or changed days are read. */
 export class CandleSync {
   constructor(
-    private readonly remote: Pick<CandleDb, "completeDayVersions" | "ohlc" | "listAssets">,
+    private readonly remote: Pick<CandleDb, "completeDayVersions" | "rawCandles" | "listAssets">,
     private readonly local: Pick<LocalCandleCache, "dayVersions" | "replaceDays" | "replaceAssets">,
   ) {}
 
@@ -41,7 +41,7 @@ export class CandleSync {
     await mapWithConcurrency(requests, CONCURRENCY, async ({ activeId, days }) => {
       const from = Date.parse(`${days[0]!.day}T00:00:00Z`) / 1000;
       const to = Date.parse(`${days.at(-1)!.day}T00:00:00Z`) / 1000 + DAY_MS / 1000;
-      const candles = await retry(() => this.remote.ohlc(activeId, size, from, to), { label: `read ${activeId} ${days[0]!.day}` });
+      const candles = await retry(() => this.remote.rawCandles(activeId, size, from, to), { label: `read ${activeId} ${days[0]!.day}` });
       this.local.replaceDays(activeId, size, days, candles);
       summary.copied += days.length;
       summary.candles += candles.length;

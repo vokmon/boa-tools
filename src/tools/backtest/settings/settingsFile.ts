@@ -44,10 +44,6 @@ export function defaultValues(): Record<string, number | string> {
     "candle.minSizeVsAverage": s.minCandleSizeRatio,
     "candle.sizeCandles": s.candlesToCheckSize,
     "candle.sizeLookback": s.sizeLookback,
-    "volume.minVsAverage": s.volumeMinRatio,
-    "volume.maxVsAverage": s.volumeMaxRatio,
-    "volume.lookback": s.volumeLookback,
-    "volume.withoutVolume": s.withoutVolume,
     "martingale.type": DEFAULT_MARTINGALE.type,
     "martingale.multiplier": DEFAULT_MARTINGALE.multiplier,
     "martingale.levels": DEFAULT_MARTINGALE.levels,
@@ -141,12 +137,8 @@ function toRunSetting(file: string, values: Record<string, number | string | str
   const level = values["stochastic.level"] as number;
   signal.stochasticKOversold = 100 - level;
   signal.stochasticDOversold = 100 - level;
-  signal.withoutVolume = values["volume.withoutVolume"] as SignalSettings["withoutVolume"];
   if (signal.sizeLookback + signal.candlesToCheckSize > signal.windowSize) {
     throw new SettingsError(`${file}: candle.sizeLookback + candle.sizeCandles must be at most ${signal.windowSize}`);
-  }
-  if (signal.volumeLookback > signal.windowSize - 1) {
-    throw new SettingsError(`${file}: volume.lookback must be at most ${signal.windowSize - 1} (the candles before the signal candle in the bot's window)`);
   }
   return {
     label: file,

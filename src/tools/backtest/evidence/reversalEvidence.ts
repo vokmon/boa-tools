@@ -11,7 +11,7 @@ import { bangkokPeriod, type BacktestPeriod } from "../runBacktest";
  * after a red one a CALL. It reverses when the next candle closes the other way; a next candle that
  * closes where it opened (a draw) is left out. The evidence is measured in the move's direction,
  * e.g. the stochastic of a green candle is %K, of a red one 100 - %K. The indicator periods are the
- * bot's (stochastic 13/3/3, box 25, Donchian 20, Bollinger 14 x2, size 35 candles, volume 20).
+ * bot's (stochastic 13/3/3, box 25, Donchian 20, Bollinger 14 x2, size 35 candles).
  */
 
 /** Candles before one that it needs: the longest indicator, with room to spare. */
@@ -21,7 +21,6 @@ const CHANNEL = 20;
 const BANDS = { period: 14, stdDev: 2 };
 const STOCH = { k: 13, d: 3, smooth: 3 };
 const SIZE_LOOKBACK = 35;
-const VOLUME_LOOKBACK = 20;
 /** The asset's own recent reversal rate is taken over this many candles before. */
 const RECENT = 30;
 /** Assets listed at each end of the per-asset table. */
@@ -62,7 +61,6 @@ interface Series {
   close: Float64Array;
   high: Float64Array;
   low: Float64Array;
-  volume: Float64Array;
   runs: Int32Array;
   k: Float64Array;
   boxHigh: Float64Array;
@@ -73,7 +71,6 @@ interface Series {
   lower: Float64Array;
   /** Running totals: index i holds the sum over candles 0 … i - 1, so "the L candles before i" is sums[i] - sums[i - L]. */
   bodySums: Float64Array;
-  volumeSums: Float64Array;
   /** Candles that reversed the one before them, and candles where that is known (neither is a doji). */
   reversedSums: Float64Array;
   outcomeSums: Float64Array;
@@ -177,16 +174,6 @@ const FEATURES: readonly Feature[] = [
     },
   },
   {
-    key: "volume",
-    name: "Volume vs the average volume",
-    about: "The candle's volume against the average of the 20 candles before. OTC assets have no volume.",
-    buckets: ["no volume", "under 0.5", "0.5-1", "1-1.5", "1.5-2", "2-3", "3 or more"],
-    bucket: (s, i) => {
-      const average = (s.volumeSums[i]! - s.volumeSums[i - VOLUME_LOOKBACK]!) / VOLUME_LOOKBACK;
-      return average > 0 ? band(s.volume[i]! / average, [0.5, 1, 1.5, 2, 3]) + 1 : 0;
-    },
-  },
-  {
     key: "recent",
     name: "The asset's recent reversals",
     about: "How often this asset's candles reversed over its last 30 candles: does reversing come in streaks?",
@@ -271,14 +258,11 @@ function series(candles: readonly Candle[], size: number): Series {
   const close = Float64Array.from(candles, (c) => c.close);
   const high = Float64Array.from(candles, (c) => c.max);
   const low = Float64Array.from(candles, (c) => c.min);
-  const volume = Float64Array.from(candles, (c) => c.volume ?? 0);
   const bodySums = new Float64Array(n + 1);
-  const volumeSums = new Float64Array(n + 1);
   const reversedSums = new Float64Array(n + 1);
   const outcomeSums = new Float64Array(n + 1);
   for (let i = 0; i < n; i++) {
     bodySums[i + 1] = bodySums[i]! + Math.abs(close[i]! - open[i]!);
-    volumeSums[i + 1] = volumeSums[i]! + volume[i]!;
     // Candle i reversed: it and the one before it have opposite colours (known once i closes)
     const here = Math.sign(close[i]! - open[i]!);
     const before = i > 0 ? Math.sign(close[i - 1]! - open[i - 1]!) : 0;
@@ -294,7 +278,6 @@ function series(candles: readonly Candle[], size: number): Series {
     close,
     high,
     low,
-    volume,
     runs: consecutiveColours(open, close),
     k: stoch.k,
     boxHigh: rollingMax(high, BOX),
@@ -304,7 +287,6 @@ function series(candles: readonly Candle[], size: number): Series {
     upper: bands.upper,
     lower: bands.lower,
     bodySums,
-    volumeSums,
     reversedSums,
     outcomeSums,
     botSignal: new SignalEngine(candles, size).signals(),

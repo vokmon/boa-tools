@@ -26,7 +26,8 @@ trade-off can be decided with real numbers.
 Every first order is **30 THB**, the smallest IQ Option takes; money in the results is in THB.
 
 The periods of Donchian (20), Bollinger (14) and support/resistance (25) stay as the bot uses them;
-we tune the zone, stochastic level, candle rules and volume. Candles are always 1 minute.
+we tune the zone, stochastic level and candle rules (shape and size). Candles are always 1 minute.
+Volume is not used: only main assets have it, and it made too little difference (see findings.md).
 
 ## Why 97% won rounds still lose money
 

@@ -35,18 +35,17 @@ describe("reversal evidence", () => {
       return { candles: tallies.reduce((n, t) => n + t.candles, 0), rate: rate(tallies) };
     };
     // Evidence that every candle has puts each candle in exactly one bucket
-    for (const key of ["bot", "run", "hour", "volume"]) expect(totals(key)).toEqual({ candles, rate: (reversed / candles) * 100 });
+    for (const key of ["bot", "run", "hour", "wick"]) expect(totals(key)).toEqual({ candles, rate: (reversed / candles) * 100 });
     // A random walk reverses about half the time
     expect(totals("run").rate).toBeGreaterThan(45);
     expect(totals("run").rate).toBeLessThan(55);
   });
 
-  test("the synthetic assets have no volume, so every candle is in \"no volume\"", async () => {
+  test("the tables print, one per piece of evidence", async () => {
     const cache = new LocalCandleCache(await syntheticCache());
     const run = reversalEvidence(cache, SIZE);
     cache.close();
-    const volume = run.evidence.find((e) => e.key === "volume")!;
-    expect(volume.buckets.slice(1).every((b) => b.otc.older.candles + b.otc.newest.candles === 0)).toBe(true);
-    expect(evidenceLines(run).join("\n")).toContain("Volume vs the average volume");
+    const text = evidenceLines(run).join("\n");
+    for (const e of run.evidence) expect(text).toContain(e.name);
   });
 });

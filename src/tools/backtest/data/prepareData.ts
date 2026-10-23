@@ -1,22 +1,26 @@
 import type { IqOptionEnv } from "@/config/env";
 import type { CandleDb } from "@/storage/CandleDb";
 import type { LocalCandleCache } from "@/storage/LocalCandleCache";
-import { firstFullDay, type CollectSummary } from "@/tools/shared/candles/CandleCollector";
+import { firstFullDay } from "@/tools/shared/candles/CandleCollector";
 import { collectFromBroker, type CollectReport } from "@/tools/shared/candles/collectFromBroker";
 import { buildPeriod } from "@/lib/date";
 import { compactNumber, shortDay, type Bar, type Progress, type Task } from "@/lib/progress";
-import { CandleSync, type SyncSummary } from "./CandleSync";
+import { CandleSync } from "./CandleSync";
+import { MirroredStore } from "./MirroredStore";
+import { backfillTurso } from "./backfillTurso";
 
 /** yyyy-mm-dd -> dd/mm/yyyy */
 const toDmy = (key: string) => key.split("-").reverse().join("/");
 
 /**
- * Gets the data ready before every backtest:
- * 1. brings Turso up to date from IQ Option: every day the broker still has, up to now (today's
- *    candles so far included); complete asset-days are skipped, so only today and anything missed
- *    are fetched,
- * 2. copies new or changed complete days from Turso into the local cache (the backtest uses
- *    complete days only).
+ * Gets the data ready before every backtest, keeping the local copy and Turso in sync as far as
+ * Turso allows:
+ * 1. IQ Option -> local copy + Turso: asset-days in neither place are fetched (every day the broker
+ *    still has, up to now; today's candles so far go to Turso only). Saved locally first; once Turso
+ *    refuses writes (its monthly limit) the rest go to the local copy only,
+ * 2. Turso -> local copy: days only Turso has (e.g. from the daily Supabase job), or changed there,
+ * 3. local copy -> Turso: days only the local copy has (saved while Turso refused writes), oldest
+ *    first, until Turso refuses again.
  */
 export async function prepareData(input: {
   iqEnv: IqOptionEnv;
@@ -26,33 +30,55 @@ export async function prepareData(input: {
   size: number;
   now: Date;
   progress: Progress;
-}): Promise<{ collect: CollectSummary; sync: SyncSummary }> {
+}): Promise<void> {
   const { db, cache, size, now, progress } = input;
   const today = now.toISOString().slice(0, 10);
   const days = buildPeriod(toDmy(firstFullDay(now, size)), toDmy(today), "UTC").days.map((d) => d.key);
 
   progress.step("Data");
 
-  const turso = progress.task("☁️ ", "Turso, from IQ Option");
-  const { summary: collect } = await collectFromBroker({ iqEnv: input.iqEnv, db, days, size, force: false, now, report: collectReport(turso, days.length) });
+  // 1. IQ Option -> local copy + Turso
+  const fetch = progress.task("📥", "1/3 IQ Option → local copy + Turso");
+  const store = new MirroredStore(db, cache);
+  const { summary: collect } = await collectFromBroker({ iqEnv: input.iqEnv, db: store, days, size, force: false, now, report: collectReport(fetch, days.length) });
+  if (store.tursoBlocked) fetch.warn(`Turso's monthly write limit is reached: ${store.localOnly.toLocaleString("en-US")} asset-days saved to the local copy only, copied to Turso on a later run`);
   const upTo = `up to date to ${bangkokTime(now)} (Bangkok)`;
-  if (collect.failed.length) turso.fail(`${collect.failed.length} asset-days failed, retried next run; otherwise ${upTo}`);
+  if (collect.failed.length) fetch.fail(`${collect.failed.length} asset-days failed, retried next run; otherwise ${upTo}`);
   // Candles already stored are kept as they are, so "fetched" includes today's earlier minutes
-  else turso.done(`${upTo} · ${compactNumber(collect.candles)} candles fetched`);
+  else fetch.done(`${upTo} · ${compactNumber(collect.candles)} candles fetched`);
 
-  const local = progress.task("🔄", "Local copy");
+  // 2. Turso -> local copy
+  const toLocal = progress.task("☁️ ", "2/3 Turso → local copy");
   let bar: Bar | undefined;
   const sync = await new CandleSync(db, cache).sync(size, {
     start: (assetDays, requests) => {
-      local.info("📥", `${assetDays.toLocaleString("en-US")} new or changed asset-days in Turso`);
-      bar = local.bar(requests, "requests");
+      toLocal.info("📥", `${assetDays.toLocaleString("en-US")} asset-days only in Turso, or changed there`);
+      bar = toLocal.bar(requests, "requests");
     },
     request: () => bar?.update(),
   });
   bar?.end();
-  local.done(sync.copied === 0 ? "Already up to date" : `Copied ${sync.copied.toLocaleString("en-US")} asset-days · ${compactNumber(sync.candles)} candles`);
-  local.info("💾", localCopyLine(cache, input.cachePath, size));
-  return { collect, sync };
+  toLocal.done(sync.copied === 0 ? "Already in sync" : `Copied ${sync.copied.toLocaleString("en-US")} asset-days · ${compactNumber(sync.candles)} candles`);
+
+  // 3. local copy -> Turso
+  const toTurso = progress.task("💾", "3/3 Local copy → Turso");
+  if (store.tursoBlocked) {
+    toTurso.warn("Skipped: Turso refuses writes until its limit resets (the 1st of the month)");
+  } else {
+    let days: Bar | undefined;
+    const backfill = await backfillTurso(db, cache, size, {
+      start: (assetDays) => {
+        toTurso.info("📤", `${assetDays.toLocaleString("en-US")} asset-days only in the local copy`);
+        days = toTurso.bar(assetDays, "asset-days");
+      },
+      day: () => days?.update(),
+    });
+    days?.end();
+    if (backfill.blocked) toTurso.warn(`Turso's monthly write limit is reached: ${(backfill.missing - backfill.copied).toLocaleString("en-US")} asset-days wait for a later run`);
+    toTurso.done(backfill.missing === 0 ? "Already in sync" : `Copied ${backfill.copied.toLocaleString("en-US")} of ${backfill.missing.toLocaleString("en-US")} asset-days · ${compactNumber(backfill.candles)} candles`);
+  }
+  const held = cache.days(size);
+  progress.task("💾", localCopyLine(cache, input.cachePath, size)).done(`${held.length} days ready for the backtest`);
 }
 
 /** --local: no Turso or IQ Option, the local copy as it is. */

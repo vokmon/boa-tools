@@ -29,8 +29,9 @@ Reason from the reversal idea instead of trying random numbers.
            session and longest losing streak, per start hour
 - [ ] 3. **Report redesign around sessions**: the verdict first, cards with a status, the first-order
          win with its margin of error (± and "surely above / can't tell / surely below").
-- [ ] 4. Measure **combinations** of evidence: volume x each other piece of evidence on main assets, and
-         price x price on main and on OTC separately, so OTC gets a fair second chance.
+- [ ] 4. Measure **combinations** of evidence from the candles: size, body, wick, same colour in a row,
+         stochastic, box position, band and hour with each other, on main and on OTC separately, so OTC
+         gets a fair second chance.
 - [ ] 5. Build settings only from combinations that stay above break-even on the older days **and** the
          newest 2 weeks, with enough candles there. Judge the edge per group (trade OTC only if OTC itself
          passes) and per session.

@@ -46,9 +46,11 @@ hours to trade.`,
     { name: "DATA_DIR", description: "folder for the local candles copy", default: "data" },
   ],
   notes: `
-Every run first (unless --local):
-  1. brings Turso up to date from IQ Option (every day the broker still has, up to now)
-  2. copies new finished days into the local copy (<DATA_DIR>/candles.sqlite)
+Every run first keeps the local copy (<DATA_DIR>/candles.sqlite) and Turso in sync (unless --local):
+  1. IQ Option -> local copy + Turso: asset-days in neither place (local only when Turso's
+     monthly write limit is used up)
+  2. Turso -> local copy: days only Turso has
+  3. local copy -> Turso: days only the local copy has, once Turso accepts writes again
 then plays each setting at max martingale 0 to 4 on all finished days.
 
 Each run writes to <BACKTEST_RESULTS_DIR>/<date_time>/:

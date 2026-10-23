@@ -56,16 +56,6 @@ The signal candle must be a solid move: a big body, a small wick against the mov
 | `candle.sizeCandles` Candles checked for size | How many latest candles the size rule applies to. | Higher: stricter, fewer signals. | 3 | 1-10 (whole) |
 | `candle.sizeLookback` Candles in the average size | How many earlier candles the average body is taken over. | Higher: a longer-term average. | 35 | 5-90 (whole) |
 
-## Volume
-
-The signal candle's volume (how much was traded in that minute) against the average of the candles just before it. Not part of the bot's signal today; off unless set. IQ Option reports no volume for OTC assets.
-
-| Setting | What it is | Raising it | Bot | Allowed |
-|---|---|---|---|---|
-| `volume.minVsAverage` Busy signal candle (x average) | The signal candle's volume must be at least this many times the average volume before it, e.g. 2 means double. 0 turns it off. | Higher: only candles with a bigger burst of trading, fewer signals. | 0 | 0-20 |
-| `volume.maxVsAverage` Quiet signal candle (x average) | The signal candle's volume must be at most this many times the average volume before it, e.g. 0.8. 0 turns it off. | Higher: allows busier candles, more signals. | 0 | 0-20 |
-| `volume.lookback` Candles in the average volume | How many candles before the signal candle the average volume is taken over. | Higher: a longer-term average. | 20 | 1-99 (whole) |
-| `volume.withoutVolume` Assets without volume | What to do where there is no volume to check (OTC assets): trade ignores the volume rule there, skip does not trade those assets, so only assets with volume trade. | - | trade | trade / skip |
 
 ## Martingale
 
