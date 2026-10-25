@@ -1,4 +1,5 @@
 import { ROUNDS_PER_DAY_GOAL } from "@/domain/backtest/summary";
+import type { SessionRule } from "@/domain/backtest/sessions";
 import type { SettingResult } from "../runBacktest";
 import { defaultValues } from "../settings/settingsFile";
 
@@ -59,7 +60,7 @@ export function ordered(results: readonly SettingResult[]): SettingResult[] {
 }
 
 /** Settings-file JSON for a resolved setting, every value written out (same shape as bot-current.json). */
-export function settingsFileJson(values: Record<string, unknown>, note?: string): Record<string, unknown> {
+export function settingsFileJson(values: Record<string, unknown>, note: string | undefined, sessions: readonly SessionRule[]): Record<string, unknown> {
   const out: Record<string, unknown> = note ? { note } : {};
   for (const [path, v] of Object.entries(values)) {
     if (path === "hours") continue;
@@ -67,5 +68,6 @@ export function settingsFileJson(values: Record<string, unknown>, note?: string)
     out[group] = { ...((out[group] as object) ?? {}), [key]: v };
   }
   if (values.hours) out.hours = values.hours;
+  out.sessions = sessions;
   return out;
 }

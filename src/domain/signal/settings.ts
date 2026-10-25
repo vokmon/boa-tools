@@ -7,6 +7,12 @@ export interface SignalSettings {
   /** Closed candles the bot looks at for each signal (iq-robot CANDLE_NUMBER). */
   windowSize: number;
 
+  /** Each rule can be switched off, so any combination can be tried from a settings file. The bot uses all of them. */
+  useSupportResistance: boolean;
+  useDonchian: boolean;
+  useBollinger: boolean;
+  useStochastic: boolean;
+
   /** Support/resistance box: the highest high / lowest low of this many candles. */
   supportResistancePeriod: number;
   /** PUT: the candle's high is at least this far (0-1) into the upper half of the box. */
@@ -51,6 +57,10 @@ export interface SignalSettings {
 
 export const DEFAULT_SIGNAL_SETTINGS: Readonly<SignalSettings> = Object.freeze({
   windowSize: 100,
+  useSupportResistance: true,
+  useDonchian: true,
+  useBollinger: true,
+  useStochastic: true,
   supportResistancePeriod: 25,
   zonePositionThreshold: 0.92,
   donchianPeriod: 20,

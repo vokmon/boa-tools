@@ -7,26 +7,31 @@ Reason from the reversal idea instead of trying random numbers.
 - [x] 1. Every result shows **Main, OTC and Total** separately (rounds per day, first-order win, newest 2
          weeks, profit per day), so an edge on one group is not hidden by the other. Each is split into
          **weekdays and weekends** too: main assets almost stop at the weekend (see findings.md), so an
-         average over all days hides how busy a setting is on a normal trading day. The 600-1000 rounds
-         goal is judged on weekdays.
+         average over all days hides how busy a setting is on a normal trading day. The busy goal (25-42
+         signals an hour) is judged on weekdays.
 - [ ] 2. **Sessions in the backtest** (see goals.md), as decided on 22/10/2026:
          - settings files list whole session rules, each one compared on its own:
            ```json
            "sessions": [
-             { "minutes": 30, "takeProfit": 10, "stopLossRounds": 1 },
-             { "minutes": 30, "takeProfit": 30, "stopLossRounds": 1 },
-             { "minutes": 60, "takeProfit": 10, "stopLossRounds": 1 },
-             { "minutes": 60, "takeProfit": 30, "stopLossRounds": 2 }
+             { "minutes": 30, "takeProfitMultiplier": 10, "stopLossRounds": 1 },
+             { "minutes": 30, "takeProfitMultiplier": 30, "stopLossRounds": 1 },
+             { "minutes": 60, "takeProfitMultiplier": 10, "stopLossRounds": 1 },
+             { "minutes": 60, "takeProfitMultiplier": 30, "stopLossRounds": 2 }
            ]
            ```
-         - `takeProfit` is in times the first order (10 = 300 THB with the 30 THB minimum order);
+         - `sessions` is required in every settings file
+         - `takeProfitMultiplier` is in times the first order (10 = 300 THB with the 30 THB minimum order);
            `stopLossRounds` is how many fully lost rounds the session may lose (1 = 1,933 THB at x2.5,
            1,263 at x2.2), so one set of rules fits every multiplier and amount; the report shows THB
          - a round still running at a stop is finished
          - research tries a session starting at every hour (00:00 … 23:00) of every day, to find the
            good start hours; fixed start times can come later
-         - results per session: the share hitting take-profit / stop-loss / time, the average, worst
-           session and longest losing streak, per start hour
+         - results per session rule: how often sessions reach take-profit / hit stop-loss / run out
+           of time (1 in N, with the minutes it took), the average session, sessions in profit, the
+           worst session, the newest 2 weeks, the start hours best first, and the usual range after
+           20 sessions; sessions with nothing to trade show N/A
+         - the report: a Session switch (each rule, or All day for the whole-day view), session columns
+           in the compare table, and a Sessions panel in each setting's tab; every other panel stays
 - [ ] 3. **Report redesign around sessions**: the verdict first, cards with a status, the first-order
          win with its margin of error (± and "surely above / can't tell / surely below").
 - [ ] 4. Measure **combinations** of evidence from the candles: size, body, wick, same colour in a row,

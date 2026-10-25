@@ -31,14 +31,14 @@ export async function writeResultFiles(dir: string, run: BacktestResult): Promis
       worstCaseStake: r.worstCaseStake,
       summary: r.summary,
       // Main and OTC on their own; per-asset results are in byAsset already
-      groups: Object.fromEntries(Object.entries(r.groups).map(([key, g]) => [key, { summary: g.summary, days: g.days }])),
+      groups: Object.fromEntries(Object.entries(r.groups).map(([key, g]) => [key, { signals: g.signals, summary: g.summary, days: g.days, sessions: g.sessions }])),
       byAsset: r.byAsset,
     })),
   };
   await Bun.write(join(dir, "results.json"), JSON.stringify(json, null, 1));
   await Bun.write(join(dir, "ai-brief.md"), aiBrief(run));
   for (const r of rows) {
-    await Bun.write(join(dir, "settings", `${fileSafe(r.setting.label)}.json`), JSON.stringify(settingsFileJson(r.setting.values, r.setting.note), null, 2) + "\n");
+    await Bun.write(join(dir, "settings", `${fileSafe(r.setting.label)}.json`), JSON.stringify(settingsFileJson(r.setting.values, r.setting.note, r.setting.sessions), null, 2) + "\n");
   }
   return ["results.json", "ai-brief.md", "settings/"];
 }

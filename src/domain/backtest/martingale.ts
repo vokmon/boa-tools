@@ -1,9 +1,12 @@
 /** Martingale and order settings, and the next stake after a loss (same rules as iq-robot). */
 
-export type MartingaleType = "standard" | "recovery";
+export type MartingaleType = "standard" | "recovery" | "cover";
 
 export interface MartingaleSettings {
-  /** standard: each level stakes `multiplier` x the previous one. recovery: sized to win back all losses plus a normal win. */
+  /**
+   * standard: each level stakes `multiplier` x the previous one. recovery: sized to win back all losses
+   * plus a normal win. cover: sized to win back exactly the losses, so a martingale win ends at 0.
+   */
   type: MartingaleType;
   multiplier: number;
   /** Martingale levels after the first order; 4 means up to 5 orders per round. */
@@ -24,7 +27,7 @@ export const DEFAULT_MARTINGALE: Readonly<MartingaleSettings> = Object.freeze({ 
 /** 30 THB is the smallest order IQ Option takes. */
 export const DEFAULT_ORDER: Readonly<OrderSettings> = Object.freeze({ amount: 30, payout: 85 });
 
-/** iq-robot rounds recovery stakes up to the cent so a win never falls short. */
+/** Recovery and cover stakes are rounded up to the cent so a win never falls short (as iq-robot does). */
 function roundUpTo2(value: number): number {
   return Math.ceil(value * 100) / 100;
 }
@@ -32,6 +35,7 @@ function roundUpTo2(value: number): number {
 /** Stake of the next level after a loss. `lossSoFar` includes the order that just lost. */
 export function nextStake(previousStake: number, lossSoFar: number, martingale: MartingaleSettings, order: OrderSettings): number {
   if (martingale.type === "recovery") return roundUpTo2(lossSoFar / (order.payout / 100) + order.amount);
+  if (martingale.type === "cover") return roundUpTo2(lossSoFar / (order.payout / 100));
   return previousStake * martingale.multiplier;
 }
 

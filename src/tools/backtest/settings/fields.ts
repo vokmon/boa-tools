@@ -46,11 +46,17 @@ export const NUMBER_FIELDS: readonly NumberField[] = [
   { path: "martingale.levels", about: "martingale levels after the first order (4 = up to 5 orders per round)", integer: true, min: 0, max: 8, tryRange: [2, 4] },
   { path: "order.amount", about: "stake of the first order, THB (IQ Option takes 30 at least)", integer: false, min: 30, max: 1_000_000, tryRange: [30, 30] },
   { path: "order.payout", about: "profit on a win, percent of the stake", integer: false, min: 1, max: 100, tryRange: [80, 90] },
+  { path: "trading.maxOpenRounds", about: "most rounds open at once across all assets; a signal is skipped while that many are running (0 = no limit)", integer: true, min: 0, max: 1000, tryRange: [1, 5] },
 ];
 
 export const FIELD_BY_PATH = new Map(NUMBER_FIELDS.map((f) => [f.path, f]));
 
-/** Settings that are a choice between words; the first value is the default. */
-export const CHOICE_FIELDS: Readonly<Record<string, readonly string[]>> = {
-  "martingale.type": ["standard", "recovery"],
+/** Settings that are a choice between a few values; the first value is the default. */
+export const CHOICE_FIELDS: Readonly<Record<string, readonly (string | boolean)[]>> = {
+  // Each rule switched on (true) or off (false); the bot uses all of them
+  "supportResistance.use": [true, false],
+  "donchian.use": [true, false],
+  "bollinger.use": [true, false],
+  "stochastic.use": [true, false],
+  "martingale.type": ["standard", "recovery", "cover"],
 };

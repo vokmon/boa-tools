@@ -153,7 +153,8 @@ async function chooseSettings(files: SettingsFiles, all: boolean, names: string 
   return picked.includes(ALL) ? files : files.filter((f) => picked.includes(f.file));
 }
 
-/** 2026-10-22_1530 (Bangkok time) */
+/** 2026-10-22_153045 (Bangkok time) */
 function runFolderName(now: Date): string {
-  return new Date(now.getTime() + 7 * 3_600_000).toISOString().slice(0, 16).replace("T", "_").replace(":", "");
+  // Seconds too, so two runs in the same minute do not overwrite each other
+  return new Date(now.getTime() + 7 * 3_600_000).toISOString().slice(0, 19).replace("T", "_").replaceAll(":", "");
 }

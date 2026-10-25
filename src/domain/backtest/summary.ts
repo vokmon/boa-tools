@@ -71,8 +71,8 @@ export interface Summary {
   goodHours: string[];
   avoidHours: string[];
   daily: { day: string; rounds: number; profit: number }[];
-  /** Week by week (weeks start on Monday, Bangkok time): does the first-order win hold over time? */
-  weekly: { week: string; rounds: number; firstWinPct: number }[];
+  /** The test cut into PARTS equal stretches of days, oldest first: does it hold over time? */
+  parts: PartStat[];
   /** The last 2 weeks against the days before them. */
   check: { before: PeriodStat; last: PeriodStat; heldUp: boolean };
 }
@@ -189,26 +189,46 @@ export function summarize(rounds: readonly Round[], days: readonly string[], lev
     goodHours: hourRanges(hourStat, "good"),
     avoidHours: hourRanges(hourStat, "avoid"),
     daily,
-    weekly: weeklyStats(finished, days, dayOf),
+    parts: dayParts(days).map(({ from, to, first, last }) =>
+      partStat(finished.filter((r) => dayOf(r)! >= first && dayOf(r)! <= last), from, to, last - first + 1, levels),
+    ),
     // Held up: the last 2 weeks still made money, at least half as much per round as before
     check: { before, last, heldUp: last.profitPerRound > 0 && last.profitPerRound >= before.profitPerRound * 0.5 },
   };
 }
 
-/** First-order win per week; a week is named by its Monday, and the first may start mid-week. */
-function weeklyStats(finished: readonly Round[], days: readonly string[], dayOf: (r: Round) => number | undefined): Summary["weekly"] {
-  const mondayOf = (day: string) => {
-    const t = Date.parse(`${day}T00:00:00Z`);
-    return new Date(t - ((new Date(t).getUTCDay() + 6) % 7) * 86_400_000).toISOString().slice(0, 10);
+/** How many equal stretches "does it hold over time?" cuts the test into. */
+export const PARTS = 4;
+
+export interface PartStat {
+  /** First and last Bangkok day of the stretch. */
+  from: string;
+  to: string;
+  roundsPerDay: number;
+  firstWinPct: number;
+  /** Share of finished rounds won by the first order, martingale 1 … levels, then lost all, in percent. */
+  ends: number[];
+}
+
+/** The days cut into PARTS stretches as equal as possible, oldest first (index range and dates). */
+export function dayParts(days: readonly string[]): { from: string; to: string; first: number; last: number }[] {
+  const parts = Math.min(PARTS, days.length);
+  return Array.from({ length: parts }, (_, p) => {
+    const first = Math.floor((p * days.length) / parts);
+    const last = Math.floor(((p + 1) * days.length) / parts) - 1;
+    return { from: days[first]!, to: days[last]!, first, last };
+  });
+}
+
+function partStat(finished: readonly Round[], from: string, to: string, days: number, levels: number): PartStat {
+  const share = (n: number) => (finished.length ? (n / finished.length) * 100 : 0);
+  return {
+    from,
+    to,
+    roundsPerDay: finished.length / days,
+    firstWinPct: share(finished.filter((r) => r.wonAt === 0).length),
+    ends: [...Array.from({ length: levels + 1 }, (_, level) => share(finished.filter((r) => r.wonAt === level).length)), share(finished.filter((r) => r.wonAt === LOST).length)],
   };
-  const weeks = new Map<string, { rounds: number; firstWon: number }>();
-  for (const d of days) if (!weeks.has(mondayOf(d))) weeks.set(mondayOf(d), { rounds: 0, firstWon: 0 });
-  for (const r of finished) {
-    const w = weeks.get(mondayOf(days[dayOf(r)!]!))!;
-    w.rounds++;
-    if (r.wonAt === 0) w.firstWon++;
-  }
-  return [...weeks].map(([week, w]) => ({ week, rounds: w.rounds, firstWinPct: w.rounds ? (w.firstWon / w.rounds) * 100 : 0 }));
 }
 
 function periodStat(inDays: readonly Round[], days: number): PeriodStat {

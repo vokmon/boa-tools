@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { TEST_SESSIONS } from "./helpers/sessions";
 import { bangkokPeriod } from "@/tools/backtest/runBacktest";
 import { changesFromBot, fullLossEvery, money, settingsFileJson, share } from "@/tools/backtest/output/format";
 import { parseSettingsFile } from "@/tools/backtest/settings/settingsFile";
@@ -21,14 +22,15 @@ describe("format", () => {
   });
 
   test("a tested setting is saved as a full settings file, like bot-current.json", async () => {
-    const [s] = parseSettingsFile("x", { stochastic: { level: 90 }, hours: ["07-11"], note: "try" });
+    const [s] = parseSettingsFile("x", { sessions: TEST_SESSIONS, stochastic: { level: 90 }, hours: ["07-11"], note: "try" });
     expect(changesFromBot(s!.values)).toEqual(["stochastic.level 85→90", "hours 07-11"]);
-    const saved = settingsFileJson(s!.values, s!.note);
+    const saved = settingsFileJson(s!.values, s!.note, s!.sessions);
     const botCurrent = await Bun.file("backtest/settings/bot-current.json").json();
-    expect(Object.keys(saved)).toEqual([...Object.keys(botCurrent), "hours"]);
+    expect(Object.keys(saved)).toEqual([...Object.keys(botCurrent).filter((k) => k !== "sessions"), "hours", "sessions"]);
+    expect(saved.sessions).toEqual(TEST_SESSIONS);
     expect(saved.stochastic).toEqual({ ...botCurrent.stochastic, level: 90 });
     // Saved files load back to the same setting
-    const [again] = parseSettingsFile("x", settingsFileJson(s!.values, s!.note));
+    const [again] = parseSettingsFile("x", settingsFileJson(s!.values, s!.note, s!.sessions));
     expect(again!.signal).toEqual(s!.signal);
   });
 });
@@ -39,7 +41,7 @@ describe("martingale levels", () => {
     const { LocalCandleCache } = await import("@/storage/LocalCandleCache");
     const { runBacktest } = await import("@/tools/backtest/runBacktest");
     const cache = new LocalCandleCache(await syntheticCache());
-    const [result] = runBacktest(cache, parseSettingsFile("x", { martingale: { levels: 2 } }), 60).results;
+    const [result] = runBacktest(cache, parseSettingsFile("x", { sessions: TEST_SESSIONS, martingale: { levels: 2 } }), 60).results;
     cache.close();
     expect(result!.levels.map((l) => l.levels)).toEqual([0, 1, 2, 3, 4]);
     const own = result!.levels.find((l) => l.levels === 2)!;

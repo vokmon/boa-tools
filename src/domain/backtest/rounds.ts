@@ -39,6 +39,26 @@ export interface Round {
   profit: number;
 }
 
+/**
+ * At most `max` rounds open at once across all assets: in start order (same minute: lower asset id
+ * first), a round is skipped while `max` rounds are still running, as the bot would skip the signal.
+ * The asset itself is not freed for an earlier signal by a skipped round, so this is a close
+ * approximation of a bot that limits open rounds.
+ */
+export function limitOpenRounds(rounds: readonly Round[], max: number): Round[] {
+  if (max <= 0) return [...rounds];
+  const kept: Round[] = [];
+  // End times of the kept rounds still running
+  let running: number[] = [];
+  for (const r of [...rounds].sort((a, b) => a.start - b.start || a.activeId - b.activeId)) {
+    running = running.filter((end) => end > r.start);
+    if (running.length >= max) continue;
+    running.push(r.end);
+    kept.push(r);
+  }
+  return kept;
+}
+
 /** Prices the simulator reads, as arrays (SignalEngine has them), so candle objects need not stay in memory. */
 export interface PriceSeries {
   readonly length: number;

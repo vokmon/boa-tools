@@ -1,0 +1,31 @@
+{
+  "note": "Best first order in the 25-42 signals-an-hour range: band 2.5 wide over 20 candles, stochastic 80, Donchian 45; 50.6%",
+  "supportResistance": { "period": 25, "zone": 0.92 },
+  "donchian": { "period": 45 },
+  "bollinger": { "period": 20, "stdDev": 2.5 },
+  "stochastic": { "k": 13, "d": 3, "smooth": 3, "level": 80 },
+  "candle": {
+    "sameColourInARow": 1,
+    "minBody": 0.6,
+    "maxWick": 0.25,
+    "checkLast": 1,
+    "minSizeVsAverage": 0.75,
+    "sizeCandles": 3,
+    "sizeLookback": 35
+  },
+  "martingale": {
+    "type": "standard",
+    "multiplier": [2.5, 2.2],
+    "levels": 4
+  },
+  "order": { "amount": 30, "payout": 85 },
+  "trading": {
+    "maxOpenRounds": [1, 2, 3, 0]
+  },
+  "sessions": [
+    { "minutes": 30, "takeProfitMultiplier": 10, "stopLossRounds": 1 },
+    { "minutes": 30, "takeProfitMultiplier": 30, "stopLossRounds": 1 },
+    { "minutes": 60, "takeProfitMultiplier": 10, "stopLossRounds": 1 },
+    { "minutes": 60, "takeProfitMultiplier": 30, "stopLossRounds": 2 }
+  ]
+}

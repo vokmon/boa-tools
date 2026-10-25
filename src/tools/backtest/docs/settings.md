@@ -1,9 +1,15 @@
 # Settings files
 
 A settings file is JSON in the settings folder. `bot-current.json` writes out every value as the bot
-uses it today; copy it and change what you want. Anything left out keeps the bot's value. A list tries
-each value (`"level": [80, 85, 90]` gives three settings; several lists give every combination).
-`note` is free text shown in the picker and the report.
+uses it today; copy it and change what you want. Anything left out keeps the bot's value, except
+`sessions`, which every file must list (see the end). A list tries each value (`"level": [80, 85, 90]`
+gives three settings; several lists give every combination). `note` is free text shown in the picker
+and the report.
+
+Every indicator has `"use": true` or `false`, so any combination can be tried without changing the
+code: e.g. `"donchian": { "use": false }`. A signal needs every indicator that is used; the candle rules
+always apply (set them loose to weaken them: `sameColourInARow` 1, `minBody` 0, `maxWick` 1,
+`minSizeVsAverage` 0).
 
 ## Support / resistance
 
@@ -11,6 +17,7 @@ A box made of the highest high and lowest low of recent candles. A PUT needs the
 
 | Setting | What it is | Raising it | Bot | Allowed |
 |---|---|---|---|---|
+| `supportResistance.use` Use support / resistance | Whether this rule is used: true or false. Every rule that is used must pass. | - | true | true / false |
 | `supportResistance.period` Box length (candles) | How many candles the support/resistance box covers. | Higher: a wider box, so being near its edge is rarer. | 25 | 2-90 (whole) |
 | `supportResistance.zone` How close to the edge (0-1) | How far into the top or bottom half of the box the candle must reach; 1 is the very edge. | Higher: only candles right at the edge count, fewer signals. | 0.92 | 0-1 |
 
@@ -20,6 +27,7 @@ The highest high and lowest low of recent candles. A PUT needs the candle to bre
 
 | Setting | What it is | Raising it | Bot | Allowed |
 |---|---|---|---|---|
+| `donchian.use` Use the Donchian channel | Whether this rule is used: true or false. Every rule that is used must pass. | - | true | true / false |
 | `donchian.period` Channel length (candles) | How many candles the Donchian channel covers. | Higher: a breakout needs a longer-term high or low, fewer signals. | 20 | 2-90 (whole) |
 
 ## Bollinger bands
@@ -28,6 +36,7 @@ Bands around the average price, as wide as the recent price swings. A PUT needs 
 
 | Setting | What it is | Raising it | Bot | Allowed |
 |---|---|---|---|---|
+| `bollinger.use` Use Bollinger bands | Whether this rule is used: true or false. Every rule that is used must pass. | - | true | true / false |
 | `bollinger.period` Band length (candles) | How many closes the Bollinger average and width use. | Higher: smoother, slower bands. | 14 | 2-90 (whole) |
 | `bollinger.stdDev` Band width | How wide the bands are, in standard deviations of recent closes. | Higher: wider bands, so poking outside is rarer, fewer signals. | 2 | 0.5-5 |
 
@@ -37,6 +46,7 @@ Where the close sits in its recent range, 0 to 100. A PUT needs both %K and %D v
 
 | Setting | What it is | Raising it | Bot | Allowed |
 |---|---|---|---|---|
+| `stochastic.use` Use the stochastic | Whether this rule is used: true or false. Every rule that is used must pass. | - | true | true / false |
 | `stochastic.k` %K length (candles) | How many candles the stochastic range covers. | Higher: a longer range, slower to reach the extremes. | 13 | 2-60 (whole) |
 | `stochastic.d` %D length | How many %K values %D averages. | Higher: a smoother, slower %D. | 3 | 1-20 (whole) |
 | `stochastic.smooth` %K smoothing | How many raw values %K averages. | Higher: a smoother, slower %K. | 3 | 1-20 (whole) |
@@ -56,14 +66,13 @@ The signal candle must be a solid move: a big body, a small wick against the mov
 | `candle.sizeCandles` Candles checked for size | How many latest candles the size rule applies to. | Higher: stricter, fewer signals. | 3 | 1-10 (whole) |
 | `candle.sizeLookback` Candles in the average size | How many earlier candles the average body is taken over. | Higher: a longer-term average. | 35 | 5-90 (whole) |
 
-
 ## Martingale
 
 What happens after a losing order: the next order goes in the same direction on the next candle with a bigger stake, up to the last level.
 
 | Setting | What it is | Raising it | Bot | Allowed |
 |---|---|---|---|---|
-| `martingale.type` Martingale type | standard: each level stakes the multiplier times the previous one. recovery: each level is sized to win back all losses plus a normal win. | - | standard | standard / recovery |
+| `martingale.type` Martingale type | standard: each level stakes the multiplier times the previous one. recovery: each level is sized to win back all losses plus a normal win. cover: each level is sized to win back exactly the losses, so a round won by martingale ends at 0 and only first-order wins earn. | - | standard | standard / recovery / cover |
 | `martingale.multiplier` Stake multiplier | Standard martingale: each level stakes this times the previous one. | Higher: wins back losses faster, but a lost round costs far more. | 2.5 | 1-10 |
 | `martingale.levels` Martingale levels | Orders after the first one; 4 means up to 5 orders per round. | Higher: more rounds end in a win, but a lost round costs far more. | 4 | 0-8 (whole) |
 
@@ -73,9 +82,36 @@ The stake of the first order and the payout of a win.
 
 | Setting | What it is | Raising it | Bot | Allowed |
 |---|---|---|---|---|
-| `order.amount` First order (THB) | The stake of the first order of each round. | Higher: everything scales up, profit and losses alike. | 10 | 1-1000000 |
+| `order.amount` First order (THB) | The stake of the first order of each round. | Higher: everything scales up, profit and losses alike. | 30 | 30-1000000 |
 | `order.payout` Payout (%) | Profit on a winning order, in percent of the stake. | Higher: lowers the win rate needed to break even. | 85 | 1-100 |
+
+## Trading
+
+How many rounds the bot may have open at the same time across all assets. Rounds take about 2 minutes; usually 2 are open, but signals can come in bursts of 40 at once.
+
+| Setting | What it is | Raising it | Bot | Allowed |
+|---|---|---|---|---|
+| `trading.maxOpenRounds` Most rounds open at once | A new round only starts while fewer than this many rounds are running on all assets together; otherwise the signal is skipped. 0 means no limit, as the bot trades today. | Higher: more rounds, and bigger bursts when many assets signal at once. | 0 | 0-1000 (whole) |
 
 ## Hours
 
 Only start rounds in these Bangkok hours, e.g. ["07-11", "20-23"] (the end hour is excluded). All day when left out.
+
+## Sessions
+
+How we trade, required in every settings file (see [goals.md](goals.md)). Each rule is played on its
+own: a session starts at every Bangkok hour of every day and ends at whichever comes first, its
+time, its take-profit or its stop-loss.
+
+```json
+"sessions": [
+  { "minutes": 30, "takeProfitMultiplier": 10, "stopLossRounds": 1 },
+  { "minutes": 60, "takeProfitMultiplier": 30, "stopLossRounds": 2 }
+]
+```
+
+| Setting | What it is | Allowed |
+|---|---|---|
+| `minutes` | How long a session lasts at most. | 1-1440 (whole) |
+| `takeProfitMultiplier` | Stop once the session is up this many times the first order: 10 = 300 THB with a 30 THB order. Leave out for no take-profit. | 0.1-10000 |
+| `stopLossRounds` | Stop once the session is down as much as this many fully lost rounds: 1 = 1,933 THB at x2.5, 1,263 at x2.2 (30 THB order). Leave out for no stop-loss. | 0.1-100 |

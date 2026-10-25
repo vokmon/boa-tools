@@ -14,13 +14,13 @@ a CALL the opposite.
 | Target | Why |
 |---|---|
 | **First order wins more than 54.1%** (at 85% payout) | the one number that decides profit: below it every order loses money on average, whatever the martingale |
-| **600-1000 rounds a weekday**, all assets together (about 25-42 an hour) | the app should look busy (a new round every couple of minutes) without ordering nonstop; fewer looks idle, more is constant ordering. Judged on weekdays: main assets almost stop at the weekend. Per session: 25-42 rounds an hour |
+| **25-42 signals an hour on a weekday**, all assets together | how busy the app looks is how often the signal fires, not how many rounds open (a limit on open rounds skips some signals): a new chance every couple of minutes without ordering nonstop; fewer looks idle, more is constant ordering. Judged on weekdays: main assets almost stop at the weekend |
 | **Max martingale 4 or less** | more levels risk too much on one round |
 | **Tested at martingale x2.5 and x2.2** | every candidate lists `"multiplier": [2.5, 2.2]`, so both show side by side (see below) |
 | **Still profitable on the newest 2 weeks** | the newest 14 days are for checking a setting, not choosing it, so a lucky fit shows up |
 | **A compromise, not a perfect record** | losing rounds and losing sessions are fine when sessions still make money on average |
 
-If nothing reaches 54.1% at 600+ rounds a day, keep the best setting at fewer rounds too, so the
+If nothing reaches 54.1% at 25+ signals an hour, keep the best setting at fewer signals too, so the
 trade-off can be decided with real numbers.
 
 Every first order is **30 THB**, the smallest IQ Option takes; money in the results is in THB.
@@ -85,7 +85,7 @@ worth trading; fixed start times come once we know them.
   signal does not change.
 - **The session is the unit for judging a setting**: the share of sessions that hit take-profit,
   stop-loss or time, the average session, the worst session and the longest losing streak (and the
-  balance needed to survive it). The rounds goal becomes rounds per hour of a session (25-42).
+  balance needed to survive it). How busy is judged on signals an hour (25-42), see above.
 - **Watch the trap:** a small take-profit and a big stop-loss make most sessions win even with a
   losing signal; the few losing sessions cost more than all the wins. The average session decides,
   never the share of winning sessions. Compare a few stop values you would really use; never search

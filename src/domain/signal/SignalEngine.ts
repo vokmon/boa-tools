@@ -54,58 +54,71 @@ export class SignalEngine {
     const out = new Int8Array(this.length);
     const w = s.windowSize;
     // iq-robot returns HOLD when an indicator has no value at the window's last candle
-    if (w < MIN_CANDLES || w < s.bollingerPeriod || w < s.stochasticKPeriod + s.stochasticDPeriod - 1 || w < s.donchianPeriod) return out;
+    if (w < MIN_CANDLES) return out;
+    if (s.useBollinger && w < s.bollingerPeriod) return out;
+    if (s.useStochastic && w < s.stochasticKPeriod + s.stochasticDPeriod - 1) return out;
+    if (s.useDonchian && w < s.donchianPeriod) return out;
     // Breakout compares with the previous candle's channel, which must also be inside the window
     const hasPreviousChannel = w - 2 >= s.donchianPeriod - 1;
 
-    // Every indicator looked up once per call, not per candle
-    const res = this.resistance(s.supportResistancePeriod);
-    const sup = this.support(s.supportResistancePeriod);
-    const channelHigh = this.cached(`dch:${s.donchianPeriod}`, () => rollingMax(this.highs, s.donchianPeriod));
-    const channelLow = this.cached(`dcl:${s.donchianPeriod}`, () => rollingMin(this.lows, s.donchianPeriod));
-    const bands = this.cached(`bb:${s.bollingerPeriod}:${s.bollingerStdDev}`, (): Bands => bollinger(this.closes, s.bollingerPeriod, s.bollingerStdDev));
-    const stoch = this.cached(`st:${s.stochasticKPeriod}:${s.stochasticDPeriod}:${s.stochasticSmoothing}`, (): Stochastic =>
-      stochastic(this.highs, this.lows, this.closes, s.stochasticKPeriod, s.stochasticDPeriod, s.stochasticSmoothing),
-    );
+    // Every indicator looked up once per call, not per candle, and only when its rule is on
+    const res = s.useSupportResistance ? this.resistance(s.supportResistancePeriod) : undefined;
+    const sup = s.useSupportResistance ? this.support(s.supportResistancePeriod) : undefined;
+    const channelHigh = s.useDonchian ? this.cached(`dch:${s.donchianPeriod}`, () => rollingMax(this.highs, s.donchianPeriod)) : undefined;
+    const channelLow = s.useDonchian ? this.cached(`dcl:${s.donchianPeriod}`, () => rollingMin(this.lows, s.donchianPeriod)) : undefined;
+    const bands = s.useBollinger ? this.cached(`bb:${s.bollingerPeriod}:${s.bollingerStdDev}`, (): Bands => bollinger(this.closes, s.bollingerPeriod, s.bollingerStdDev)) : undefined;
+    const stoch = s.useStochastic
+      ? this.cached(`st:${s.stochasticKPeriod}:${s.stochasticDPeriod}:${s.stochasticSmoothing}`, (): Stochastic =>
+          stochastic(this.highs, this.lows, this.closes, s.stochasticKPeriod, s.stochasticDPeriod, s.stochasticSmoothing),
+        )
+      : undefined;
     const runs = this.cached("colours", () => consecutiveColours(this.opens, this.closes));
 
-    // Every rule must hold, so they are checked cheapest and most selective first; the result is
-    // the same as checking them in iq-robot's order
+    // Every rule that is on must hold, so they are checked cheapest and most selective first; the
+    // result is the same as checking them in iq-robot's order
     for (let e = w - 1; e < this.length; e++) {
       if (this.contiguous[e]! < w) continue;
-      const k = stoch.k[e]!;
-      const d = stoch.d[e]!;
-      const overbought = k > s.stochasticKOverbought && d > s.stochasticDOverbought;
-      const oversold = k < s.stochasticKOversold && d < s.stochasticDOversold;
-      if (!overbought && !oversold) continue;
-
-      const start = e - w + 1;
-      // Support / resistance: iq-robot only finds levels inside its window, and the first box
-      // there ends at window index period - 1; without both levels it returns HOLD
-      const firstBox = start + s.supportResistancePeriod - 1;
-      if (res.index[e]! < firstBox || sup.index[e]! < firstBox) continue;
-
-      const high = this.highs[e]!;
-      const low = this.lows[e]!;
-      // iq-robot counts the run from the start of its window
+      // iq-robot counts the run from the start of its window; the run also sets the direction
       const run = runs[e]!;
       const inRow = Math.sign(run) * Math.min(Math.abs(run), w);
+      let up = inRow >= s.consecutiveCandles;
+      let down = inRow <= -s.consecutiveCandles;
+      if (!up && !down) continue;
 
-      let put = false;
-      if (overbought && high > bands.upper[e]! && hasPreviousChannel && high > channelHigh[e - 1]! && inRow >= s.consecutiveCandles) {
+      if (stoch) {
+        const k = stoch.k[e]!;
+        const d = stoch.d[e]!;
+        up &&= k > s.stochasticKOverbought && d > s.stochasticDOverbought;
+        down &&= k < s.stochasticKOversold && d < s.stochasticDOversold;
+        if (!up && !down) continue;
+      }
+      const high = this.highs[e]!;
+      const low = this.lows[e]!;
+      if (bands) {
+        up &&= high > bands.upper[e]!;
+        down &&= low < bands.lower[e]!;
+        if (!up && !down) continue;
+      }
+      if (channelHigh && channelLow) {
+        up &&= hasPreviousChannel && high > channelHigh[e - 1]!;
+        down &&= hasPreviousChannel && low < channelLow[e - 1]!;
+        if (!up && !down) continue;
+      }
+
+      const start = e - w + 1;
+      if (res && sup) {
+        // Support / resistance: iq-robot only finds levels inside its window, and the first box
+        // there ends at window index period - 1; without both levels it returns HOLD
+        const firstBox = start + s.supportResistancePeriod - 1;
+        if (res.index[e]! < firstBox || sup.index[e]! < firstBox) continue;
         const mid = (res.value[e]! + sup.value[e]!) / 2;
         const upperZone = res.value[e]! - mid;
-        put = upperZone > 0 && (high - mid) / upperZone >= s.zonePositionThreshold && this.shapeOk(e, start, s, true) && this.sizeOk(e, start, s);
-      }
-      if (put) {
-        out[e] = PUT;
-        continue;
-      }
-      if (oversold && low < bands.lower[e]! && hasPreviousChannel && low < channelLow[e - 1]! && inRow <= -s.consecutiveCandles) {
-        const mid = (res.value[e]! + sup.value[e]!) / 2;
         const lowerZone = mid - sup.value[e]!;
-        if (lowerZone > 0 && (mid - low) / lowerZone >= s.zonePositionThreshold && this.shapeOk(e, start, s, false) && this.sizeOk(e, start, s)) out[e] = CALL;
+        up &&= upperZone > 0 && (high - mid) / upperZone >= s.zonePositionThreshold;
+        down &&= lowerZone > 0 && (mid - low) / lowerZone >= s.zonePositionThreshold;
       }
+      if (up && this.shapeOk(e, start, s, true) && this.sizeOk(e, start, s)) out[e] = PUT;
+      else if (down && this.shapeOk(e, start, s, false) && this.sizeOk(e, start, s)) out[e] = CALL;
     }
     return out;
   }

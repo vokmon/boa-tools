@@ -24,12 +24,12 @@
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif; }
   main { max-width: 1320px; margin: 0 auto; padding: 24px 16px 64px; }
   h1 { font-size: 26px; margin: 0 0 4px; }
-  h2 { font-size: 19px; margin: 40px 0 12px; display: flex; gap: 10px; align-items: baseline; }
+  h2 { font-size: 20px; margin: 40px 0 14px; display: flex; gap: 10px; align-items: baseline; letter-spacing: -.01em; }
   h2 .n { color: var(--accent); }
   h3 { font-size: 15px; margin: 0 0 10px; }
   .muted { color: var(--muted); }
   .small { font-size: 13px; }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
   .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
   .tile .label { color: var(--muted); font-size: 13px; }
   .tile .value { font-size: 24px; font-weight: 650; margin-top: 2px; overflow-wrap: anywhere; }
@@ -37,17 +37,30 @@
   .good { color: var(--good); } .bad { color: var(--bad); } .warn { color: var(--warn); }
   .table-wrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-  th, td { padding: 8px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; font-size: 14px; }
-  th { color: var(--muted); font-weight: 550; font-size: 13px; cursor: help; }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; font-size: 14px; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; cursor: help; letter-spacing: .02em; }
+  tbody tr:hover td { background: var(--accent-soft); }
+  table.compare td.setting-cell { white-space: normal; min-width: 180px; max-width: 300px; text-align: left; vertical-align: top; font-weight: 600; }
+  table.compare td.group-cell { text-align: left; color: var(--muted); }
+  table.compare tr.first-of-setting td { border-top: 2px solid var(--line); }
+  table.compare tr.picked td:not(.setting-cell) { background: var(--accent-soft); }
+  table.compare tr.chosen td:not(.setting-cell) { box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent); font-weight: 650; }
+  .why { font-size: 12px; font-weight: 500; }
+  .badge { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+  tr[data-row] { cursor: pointer; }
+  .tab-select { font: inherit; font-size: 14px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); max-width: 100%; margin-bottom: 12px; }
   th.best { color: var(--good); }
   .chips-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 12px; }
   .lvl-pick { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
   .lvl-pick.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
-  .fact { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-  .fact .label { color: var(--muted); font-size: 12px; }
-  .fact .value { font-size: 17px; font-weight: 650; margin-top: 2px; }
-  .fact .sub { color: var(--muted); font-size: 12px; }
+  .hero { background: linear-gradient(135deg, #18213a 0%, #243566 60%, #2f4a8f 100%); color: #fff; border-radius: 16px; padding: 22px 24px 20px; box-shadow: 0 8px 24px rgba(20, 30, 60, .18); }
+  .hero h1 { color: #fff; font-size: 28px; letter-spacing: -.02em; }
+  .hero .tagline { color: rgba(255, 255, 255, .72); font-size: 14px; margin-top: 2px; }
+  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+  .fact { background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .14); border-radius: 12px; padding: 10px 14px; }
+  .fact .label { color: rgba(255, 255, 255, .7); font-size: 12px; }
+  .fact .value { font-size: 18px; font-weight: 650; margin-top: 2px; }
+  .fact .sub { color: rgba(255, 255, 255, .6); font-size: 12px; }
   table.compare th.group { text-align: center; color: var(--text); font-weight: 650; border-bottom: 2px solid var(--line); cursor: default; }
   .legend-line { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--muted); }
   .best-chip { background: var(--good-soft); color: var(--text); padding: 0 8px; border-radius: 6px; }
@@ -57,13 +70,66 @@
   details.guide > summary h2::before { content: "▸"; color: var(--muted); transition: transform .15s; display: inline-block; }
   details.guide[open] > summary h2::before { transform: rotate(90deg); }
   .verdict { margin: 8px 0 0; font-size: 14px; }
-  .bar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .bar-row > .muted { width: 7.5em; }
-  .switch { position: sticky; top: 0; z-index: 5; display: flex; flex-direction: column; gap: 6px; margin: 14px -16px 0; padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
-  .lvl { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 8px; padding: 5px 12px; font: inherit; font-size: 14px; cursor: pointer; }
-  .lvl.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .verdict { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-top: 16px; box-shadow: var(--shadow); }
+  .verdict .who { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  .verdict-row { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: start; padding: 8px 10px; border-radius: 8px; font-size: 15px; }
+  .verdict-row + .verdict-row { margin-top: 6px; }
+  .verdict-row.ok { background: var(--good-soft); } .verdict-row.no { background: var(--bad-soft); }
+  .verdict-row .mark { font-size: 18px; line-height: 1.3; }
+  .tile { border-left: 4px solid var(--line); }
+  .tile.ok { border-left-color: var(--good); } .tile.no { border-left-color: var(--bad); } .tile.warn { border-left-color: var(--warn); }
+  .split-bar { display: flex; height: 44px; border-radius: 8px; overflow: hidden; margin: 4px 0 12px; }
+  .split-bar .seg { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 2px; color: #fff; line-height: 1.15; text-shadow: 0 1px 1px rgba(0, 0, 0, .25); overflow: hidden; }
+  .split-bar .seg .seg-name { font-size: 11px; font-weight: 500; opacity: .9; white-space: nowrap; }
+  .split-bar .seg b { font-size: 15px; }
+  .split-table th { text-align: right; }
+  .end-table td:first-child, .end-table th:first-child { text-align: left; }
+  .end-table tr.total-row td { font-weight: 700; border-top: 2px solid var(--line); }
+  .split-table .won-total { font-weight: 700; border-left: 2px solid var(--line); border-right: 2px solid var(--line); }
+  .split-table .key { margin: 0 2px 0 0; }
+  .chain-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .chain-option { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+  .chain-option.better { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
+  .chain-title { font-weight: 650; }
+  .chain-nums { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 6px; font-size: 14px; }
+  .good-badge { background: var(--good-soft); color: var(--good); }
+  .tile .value .unit { font-size: 14px; font-weight: 400; color: var(--muted); }
+  .end-grid { display: grid; grid-template-columns: 11em 1fr 3.6em 3.6em 6.5em 6em; gap: 8px 12px; align-items: center; font-size: 14px; }
+  .end-grid .head { color: var(--muted); font-size: 12px; font-weight: 600; }
+  .end-grid .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .end-grid .total { font-weight: 700; border-top: 1px solid var(--line); padding-top: 8px; }
+  .end-grid .end-name.total + .end-bar { margin-top: 8px; }
+  .end-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--line); }
+  .end-bar .won { background: var(--good); } .end-bar .lost { background: var(--bad); }
+  .key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-left: 6px; }
+  .key.won { background: var(--good); } .key.lost { background: var(--bad); }
+  .end-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .end-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; border-top: 4px solid var(--l3); }
+  .end-card.ok { border-top-color: var(--good); } .end-card.no { border-top-color: var(--bad); }
+  .end-head { font-size: 14px; color: var(--muted); }
+  .end-pct { font-size: 26px; font-weight: 700; margin-top: 2px; }
+  .end-pct span { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .end-line { font-size: 14px; margin-top: 2px; }
+  .k-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .hours-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+  .hour { border-radius: 6px; padding: 6px 4px; text-align: center; font-size: 12px; font-weight: 650; line-height: 1.2; }
+  .hour span { display: block; font-size: 11px; font-weight: 500; }
+  .hour span.won-pct { font-size: 18px; font-weight: 700; margin: 2px 0; }
+  .hour .avg-lost, .k-title .avg-lost { background: var(--bad, #d64545); color: #fff; border-radius: 4px; padding: 0 4px; font-weight: 700; }
+  .hour.na { background: var(--line); color: var(--muted); }
+  .hour.top { outline: 2px solid var(--good); outline-offset: 1px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; }
+  .bar-line { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+  .bar-line .bar-row > .bar-label { width: auto; }
+  .bar-row > .bar-label { width: 8.5em; flex: none; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+  .segmented { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+  .switch { position: sticky; top: 0; z-index: 5; display: flex; flex-direction: column; gap: 8px; margin: 14px 0 0; padding: 12px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+  .lvl { border: 0; background: transparent; color: var(--text); border-radius: 7px; padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  .lvl:hover { background: var(--accent-soft); }
+  .lvl.on { background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .15); }
   th:first-child, td:first-child { text-align: left; }
-  td.best { background: var(--good-soft); font-weight: 650; }
+  .star { color: #d69e00; }
+  th .goal { display: block; font-weight: 500; font-size: 11px; color: var(--muted); }
   tr.today td:first-child::after { content: "today"; margin-left: 8px; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
   .tab { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; }
@@ -118,6 +184,7 @@
   footer { margin-top: 48px; color: var(--muted); font-size: 12px; }
   @media (max-width: 860px) {
     .tiles, .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .end-cards { grid-template-columns: 1fr; }
     .grid2, .cards { grid-template-columns: 1fr; }
   }
 </style>
@@ -133,6 +200,9 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const money = (n) => { const r = Math.round(n) || 0; return (r > 0 ? "+" : "") + r.toLocaleString("en-US"); };
   const pct = (n, d = 1) => n.toFixed(d) + "%";
+  /** Rounds a day as rounds an hour, the way we read how busy the app is. */
+  const perHour = (perDay) => perDay / 24;
+  const goalHour = () => ({ min: Math.round(data.roundsGoal.min / 24), max: Math.round(data.roundsGoal.max / 24) });
   const sign = (n) => (n > 0 ? "good" : n < 0 ? "bad" : "");
   /** 13543 -> "13.5k", 950 -> "950" */
   const short = (n) => { const a = Math.abs(n), t = a >= 1000 ? `${(a / 1000).toFixed(1)}k` : String(Math.round(a)); return (n > 0 ? "+" : n < 0 ? "−" : "") + t; };
@@ -154,13 +224,46 @@
   const view = {
     group: "total",
     multiplier: String(data.multiplierOptions[0]),
+    // Most rounds open at once: the bot's "no limit" (0) when it was run, else the first
+    open: String(data.maxOpenOptions.includes(0) ? 0 : data.maxOpenOptions[0]),
     level: String(data.levelOptions.includes(4) ? 4 : data.levelOptions.at(-1)),
+    // A session rule's label, or "all" for the whole day
+    session: data.sessionOptions[0] ?? "all",
   };
+  /** A session rule's results at the chosen multiplier and max martingale, from any setting that has it. */
+  const sessionRule = (label) => settings.map((s) => variant(s)[view.group][view.level]?.sessions[label]).find(Boolean);
+  /**
+   * A session rule as the page shows it, as set in the file: "30 min · Take-profit 10x · Stop-loss 1
+   * round". The rule's label is the key in the data; sessionThb gives the same in THB.
+   */
+  const sessionName = (label) => {
+    if (label === "all") return "All day";
+    const x = sessionRule(label);
+    if (!x) return esc(label);
+    const r = x.rule;
+    return `${r.minutes} min · ${r.takeProfitMultiplier ? `Take-profit ${r.takeProfitMultiplier}x` : "No take-profit"} · ${r.stopLossRounds ? `Stop-loss ${r.stopLossRounds} round${r.stopLossRounds > 1 ? "s" : ""}` : "No stop-loss"}`;
+  };
+  /** The same rule in THB at the chosen multiplier and max martingale: "take-profit +300 THB · stop-loss −1,933 THB". */
+  const sessionThb = (label) => {
+    const x = label === "all" ? null : sessionRule(label);
+    if (!x) return "";
+    const thb = (n) => Math.round(Math.abs(n)).toLocaleString("en-US");
+    return `${x.takeProfit === null ? "no take-profit" : `take-profit +${thb(x.takeProfit)} THB`} · ${x.stopLoss === null ? "no stop-loss" : `stop-loss −${thb(x.stopLoss)} THB`}`;
+  };
+  /** The chosen session rule's results for a view, or null for "All day" or a setting without that rule. */
+  const sessionOf = (v) => (view.session === "all" ? null : v.sessions[view.session] || null);
   let tab = 0;
   const openGuides = { numbers: false, settings: false };
-  /** The setting's views at the chosen multiplier, or its own when it was not run at that one. */
-  const variant = (s) => s.views[view.multiplier] || Object.values(s.views)[0];
-  const multiplierOf = (s) => (s.views[view.multiplier] ? view.multiplier : Object.keys(s.views)[0]);
+  const openName = (n) => (Number(n) === 0 ? "No limit" : String(n));
+  /** The setting's views at the chosen multiplier and max open rounds, or its own when it was not run at those. */
+  const variantKey = () => `${view.multiplier}|${view.open}`;
+  const variant = (s) => s.views[variantKey()] || Object.values(s.views)[0];
+  /** "" when the setting was run at the chosen multiplier and max open, else what it was run at instead. */
+  const ranInstead = (s) => {
+    if (s.views[variantKey()]) return "";
+    const [m, o] = Object.keys(s.views)[0].split("|");
+    return `x${m} · max open ${openName(o)}`;
+  };
   const vw = (s, level = view.level) => variant(s)[view.group][String(level)];
   const bestLevel = (s) => Object.values(variant(s)[view.group]).sort((a, b) => b.summary.profitPerDay - a.summary.profitPerDay)[0].levels;
   const levelName = (l) => (l === 0 ? "no martingale" : `max martingale ${l}`);
@@ -170,68 +273,108 @@
   };
 
   function render() {
-    const best = [...settings].sort((a, b) => vw(b).summary.profitPerDay - vw(a).summary.profitPerDay)[0];
+    // With a session rule chosen, the best setting is the one with the best average session
+    const score = (s) => (sessionOf(vw(s))?.sessions ? sessionOf(vw(s)).averageProfit : view.session === "all" ? vw(s).summary.profitPerDay : -Infinity);
+    const best = [...settings].sort((a, b) => score(b) - score(a))[0];
     const top = vw(best).summary;
-    const showing = `${groupNames[view.group]} · x${view.multiplier} · ${levelName(Number(view.level))}`;
-    const bar = (key, label, options, name) => `<div class="bar-row"><span class="muted small">${label}</span>
-      ${options.map((o) => `<button class="lvl${String(view[key]) === String(o) ? " on" : ""}" data-key="${key}" data-value="${o}">${name(o)}</button>`).join("")}</div>`;
+    const showing = `${groupNames[view.group]} · x${view.multiplier} · ${levelName(Number(view.level))} · max open ${openName(view.open)} · ${view.session === "all" ? "all day" : sessionName(view.session)}`;
+    const bar = (key, label, options, name) => `<div class="bar-row"><span class="bar-label">${label}</span><div class="segmented">
+      ${options.map((o) => `<button class="lvl${String(view[key]) === String(o) ? " on" : ""}" data-key="${key}" data-value="${o}">${name(o)}</button>`).join("")}</div></div>`;
 
     // Header, the level switch and tiles
     let html = `
+      <header class="hero">
       <h1>🧪 Backtest report</h1>
+      <div class="tagline">Does the bot's signal win often enough, and does a trading session make money?</div>
       <div class="facts">
         ${fact("📅", "Period", `${longDay(data.period.from)} – ${longDay(data.period.to)}`, `${data.period.days} days, Bangkok time`)}
         ${fact("📈", "Assets", data.assets, `${data.assets - data.otcAssets} main · ${data.otcAssets} OTC`)}
         ${fact("🕯", "Candles", `${(data.candles / 1e6).toFixed(1)} M`, "one-minute")}
         ${fact("💵", "Orders", `${data.order.amount} THB first`, `${data.order.payout}% payout · money in THB`)}
       </div>
+      </header>
       <div class="switch">
-        ${bar("group", "Assets", data.groupOptions, (o) => groupNames[o])}
-        ${bar("multiplier", "Multiplier", data.multiplierOptions, (o) => `x${o}`)}
-        ${bar("level", "Max martingale", data.levelOptions, (o) => (o === 0 ? "None" : o))}
+        <div class="bar-line">
+          ${bar("group", "Assets", data.groupOptions, (o) => groupNames[o])}
+          ${bar("multiplier", "Multiplier", data.multiplierOptions, (o) => `x${o}`)}
+          ${bar("level", "Max martingale", data.levelOptions, (o) => (o === 0 ? "None" : o))}
+          ${bar("open", "Max open rounds", data.maxOpenOptions, openName)}
+        </div>
+        ${bar("session", "Session", [...data.sessionOptions, "all"], sessionName)}
       </div>`;
-    html += `<div class="tiles">
-      <div class="panel tile"><div class="label">Best setting (profit per day)</div><div class="value">${esc(best.label)}</div>
-        <div class="sub">${showing}${best.isBot ? " · the bot's settings" : ""}</div></div>
-      <div class="panel tile"><div class="label">Profit per day</div><div class="value ${sign(top.profitPerDay)}">${money(top.profitPerDay)}</div>
-        <div class="sub">${bot && bot !== best ? `bot: ${money(vw(bot).summary.profitPerDay)}` : `${money(top.profit)} over ${top.days} days`}</div></div>
-      <div class="panel tile"><div class="label">First order wins</div><div class="value ${top.firstOrderWinPct >= data.breakEvenPct ? "good" : "bad"}">${pct(top.firstOrderWinPct)}</div>
-        <div class="sub">needs ${pct(data.breakEvenPct, 2)} to break even · ${top.weekdays.roundsPerDay.toFixed(0)} rounds a weekday ${top.roundsInGoal ? "✅" : `⚠️ goal ${data.roundsGoal.min}-${data.roundsGoal.max}`}</div></div>
-      <div class="panel tile"><div class="label">Last ${data.checkDays} days</div><div class="value">${top.check.heldUp ? "✅ held up" : "⚠️ dropped"}</div>
-        <div class="sub">first order ${pct(top.check.beforeFirstWinPct)} → ${pct(top.check.lastFirstWinPct)} · ${money(top.check.beforePerDay)} → ${money(top.check.lastPerDay)} per day</div></div>
-    </div>`;
+    html += verdictAndCards(best, top, showing);
 
-    // ① Compare
-    const goal = (ok) => (ok ? "✅" : "❌");
+    // ① Compare: each setting as Total, Main and OTC side by side
+    const withSessions = view.session !== "all";
     const groupsOfCols = [
-      { name: "How busy?", cols: 3 },
-      { name: "Does it win?", cols: 2 },
-      { name: "Money", cols: 2 },
+      { name: "Signals an hour", cols: 2 },
+      { name: "Does it win?", cols: 3 },
+      // With a session rule chosen, sessions are the money question; the whole-day money is in each setting's tab
+      ...(withSessions ? [{ name: "Sessions", cols: 5 }] : [{ name: "Money", cols: 2 }]),
     ];
+    const na = `<span class="muted">N/A</span>`;
+    /** One setting's view for an asset group, at the chosen multiplier and max martingale. */
+    const at = (s, g) => variant(s)[g][String(view.level)];
+    const sess = (s, g) => sessionOf(at(s, g));
+    /** A value with its verdict in a few words, coloured: e.g. "50.3% below 54.1%". */
+    const verdict = (value, words, cls) => `<span class="${cls}">${value}</span> <span class="why ${cls}">${words}</span>`;
+    // The header says what is needed; the cell says which side of it the value is
+    const winCell = (v, rounds) => (rounds ? verdict(pct(v), v >= data.breakEvenPct ? "above" : "below", v >= data.breakEvenPct ? "good" : "bad") : na);
+    // How busy is not about money: outside the goal is grey, not red
+    const roundsCell = (v) => (v < goalHour().min ? verdict(v.toFixed(0), "too quiet", "muted") : v > goalHour().max ? verdict(v.toFixed(0), "too busy", "muted") : verdict(v.toFixed(0), "OK", "good"));
+    const endCell = (e) => (e.oneIn === null ? "0%" : pct(e.pct, 0));
     const cols = [
-      { name: "all days", guide: "Rounds per day", get: (s) => vw(s).summary.roundsPerDay, show: (v) => v.toFixed(0) },
-      { name: "weekday", guide: "Rounds per day", get: (s) => vw(s).summary.weekdays.roundsPerDay, show: (v, s) => `${vw(s).summary.roundsInGoal ? "✅" : "⚠️"} ${v.toFixed(0)}` },
-      { name: "weekend", guide: "Main / OTC / Total", get: (s) => vw(s).summary.weekend.roundsPerDay, show: (v) => v.toFixed(0) },
-      { name: "first order", guide: "First-order win", get: (s) => vw(s).summary.firstOrderWinPct, show: (v) => `${goal(v >= data.breakEvenPct)} ${pct(v)}`, best: "max" },
-      { name: `newest ${data.checkDays} days`, guide: "Last 2 weeks", get: (s) => vw(s).summary.check.lastFirstWinPct, show: (v) => `${goal(v >= data.breakEvenPct)} ${pct(v)}`, best: "max" },
-      { name: "per day", guide: "Profit per day", get: (s) => vw(s).summary.profitPerDay, show: (v) => `<span class="${sign(v)}">${money(v)}</span>`, best: "max" },
-      { name: "biggest drop", guide: "Biggest drop", get: (s) => vw(s).summary.biggestDrop, show: (v) => money(v), best: "max" },
+      { name: `Weekday <span class="goal">goal ${goalHour().min}–${goalHour().max}</span>`, guide: "Signals per hour", get: (s, g) => at(s, g).summary.signals.weekdaysPerHour, show: (v) => roundsCell(v) },
+      { name: "Weekend", guide: "Signals per hour", get: (s, g) => at(s, g).summary.signals.weekendPerHour, show: (v) => v.toFixed(0) },
+      { name: `First order <span class="goal">needs ${pct(data.breakEvenPct, 1)}</span>`, guide: "First-order win", get: (s, g) => at(s, g).summary.firstOrderWinPct, show: (v, s, g) => winCell(v, at(s, g).summary.roundsPerDay), best: "max" },
+      { name: "Rounds won", guide: "Rounds won", get: (s, g) => at(s, g).summary.roundWinPct, show: (v, s, g) => (at(s, g).summary.roundsPerDay ? pct(v) : na), best: "max" },
+      { name: `Newest ${data.checkDays} days <span class="goal">needs ${pct(data.breakEvenPct, 1)}</span>`, guide: "Last 2 weeks", get: (s, g) => at(s, g).summary.check.lastFirstWinPct, show: (v, s, g) => winCell(v, at(s, g).summary.last2Weeks.roundsPerDay), best: "max" },
+      ...(withSessions
+        ? [
+            { name: "Average session", guide: "Average session", get: (s, g) => (sess(s, g)?.sessions ? sess(s, g).averageProfit : -Infinity), show: (v, s, g) => (sess(s, g)?.sessions ? `<span class="${sign(v)}">${money(v)}</span>` : na), best: "max" },
+            { name: "Sessions won", guide: "Sessions won", get: (s, g) => sess(s, g)?.inProfitPct ?? -1, show: (v, s, g) => (sess(s, g)?.sessions ? pct(v, 0) : na), best: "max" },
+            { name: "Take-profit", guide: "How sessions end", get: (s, g) => sess(s, g)?.ended.takeProfit.pct ?? -1, show: (v, s, g) => (sess(s, g)?.sessions ? endCell(sess(s, g).ended.takeProfit) : na) },
+            { name: "Stop-loss", guide: "How sessions end", get: (s, g) => sess(s, g)?.ended.stopLoss.pct ?? -1, show: (v, s, g) => (sess(s, g)?.sessions ? endCell(sess(s, g).ended.stopLoss) : na) },
+            { name: "Time up", guide: "How sessions end", get: (s, g) => sess(s, g)?.ended.time.pct ?? -1, show: (v, s, g) => (sess(s, g)?.sessions ? endCell(sess(s, g).ended.time) : na) },
+          ]
+        : [
+            { name: "Per day", guide: "Profit per day", get: (s, g) => at(s, g).summary.profitPerDay, show: (v) => `<span class="${sign(v)}">${money(v)}</span>`, best: "max" },
+            { name: "Biggest drop", guide: "Biggest drop", get: (s, g) => at(s, g).summary.biggestDrop, show: (v) => money(v), best: "max" },
+          ]),
     ];
-    const bestOf = cols.map((c) => (c.best ? (c.best === "max" ? Math.max : Math.min)(...settings.map(c.get)) : null));
-    html += `<h2><span class="n">①</span> Compare <span class="muted small">${showing}</span></h2><div class="panel table-wrap"><table class="compare"><thead>
-      <tr><th></th>${groupsOfCols.map((g) => `<th colspan="${g.cols}" class="group">${g.name}</th>`).join("")}</tr>
-      <tr><th>Setting</th>${cols.map((c) => `<th title="${esc(guideText(c.guide || c.name))}">${c.name}</th>`).join("")}</tr></thead><tbody>
-      ${settings.map((s) => `<tr class="${s === bot ? "today" : ""}"><td>${esc(s.label)}${multiplierOf(s) !== view.multiplier ? ` <span class="muted small">x${multiplierOf(s)}</span>` : ""}</td>${cols
-        .map((c, i) => `<td class="${bestOf[i] !== null && c.get(s) === bestOf[i] && settings.length > 1 ? "best" : ""}">${c.show(c.get(s), s)}</td>`)
-        .join("")}</tr>`).join("")}</tbody></table>
-      <div class="legend-line">
-        <span>✅ meets the goal: ${data.roundsGoal.min}-${data.roundsGoal.max} rounds a weekday, first order above ${pct(data.breakEvenPct, 1)}</span>
-        <span>❌ ⚠️ misses it</span><span class="best-chip">best in the column</span><span>hover a column name for what it means</span>
-      </div></div>`;
+    // The bot's own settings first, as the reference; the rest best first by what the page is showing
+    const ranked = [...settings].sort((a, b) => Number(b === bot) - Number(a === bot) || score(b) - score(a));
+    // Best in each column, compared within the same asset group
+    const bestOf = Object.fromEntries(
+      data.groupOptions.map((g) => [g, cols.map((c) => (c.best ? (c.best === "max" ? Math.max : Math.min)(...settings.map((s) => c.get(s, g))) : null))]),
+    );
+    const settingRows = (s) =>
+      data.groupOptions
+        .map((g, gi) => {
+          const first = gi === 0
+            ? `<td rowspan="${data.groupOptions.length}" class="setting-cell">${esc(s.label)}${s === bot ? ` <span class="badge">today</span>` : ""}${ranInstead(s) ? ` <span class="muted small">(${ranInstead(s)})</span>` : ""}</td>`
+            : "";
+          const chosen = settings.indexOf(s) === tab && g === view.group;
+          return `<tr class="${gi === 0 ? "first-of-setting" : ""}${g === view.group ? " picked" : ""}${chosen ? " chosen" : ""}" data-row="${settings.indexOf(s)}" data-group="${g}" title="Click to see ${esc(s.label)} · ${groupNames[g]} below">${first}
+            <td class="group-cell">${groupNames[g]}</td>${cols
+              .map((c, i) => {
+                const isBest = bestOf[g][i] !== null && c.get(s, g) === bestOf[g][i] && settings.length > 1;
+                return `<td>${isBest ? `<span class="star" title="Best in this column for ${groupNames[g]}">★</span> ` : ""}${c.show(c.get(s, g), s, g)}</td>`;
+              })
+              .join("")}</tr>`;
+        })
+        .join("");
+    html += `<h2><span class="n">①</span> Compare <span class="muted small">x${view.multiplier} · ${levelName(Number(view.level))} · max open ${openName(view.open)} · ${view.session === "all" ? "all day" : sessionName(view.session)}</span></h2>
+      <div class="panel table-wrap"><p class="note" style="margin:0 0 8px">★ the best value in its column, among the settings for the same assets · click a row to see that setting and those assets below</p><table class="compare"><thead>
+      <tr><th></th><th></th>${groupsOfCols.map((g) => `<th colspan="${g.cols}" class="group">${g.name}</th>`).join("")}</tr>
+      <tr><th>Setting</th><th>Assets</th>${cols.map((c) => `<th title="${esc(guideText(c.guide || c.name))}">${c.name}</th>`).join("")}</tr></thead>
+      <tbody>${ranked.map(settingRows).join("")}</tbody></table></div>`;
 
     // ② One setting at a time
     html += `<h2><span class="n">②</span> One setting at a time <span class="muted small">${showing}</span></h2>
-      <div class="tabs">${settings.map((s, i) => `<button class="tab${i === tab ? " on" : ""}" data-tab="${i}">${esc(s.label)}</button>`).join("")}</div>
+      ${settings.length > 6
+        ? `<select class="tab-select" aria-label="Setting">${ranked.map((s) => `<option value="${settings.indexOf(s)}"${settings.indexOf(s) === tab ? " selected" : ""}>${esc(s.label)}</option>`).join("")}</select>`
+        : `<div class="tabs">${settings.map((s, i) => `<button class="tab${i === tab ? " on" : ""}" data-tab="${i}">${esc(s.label)}</button>`).join("")}</div>`}
       <div id="detail"></div>`;
 
     // ③ What the numbers mean, ④ What the settings do
@@ -248,9 +391,54 @@
 
     document.querySelectorAll(".lvl").forEach((b) => b.addEventListener("click", () => set(b.dataset.key, b.dataset.value)));
     document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(Number(t.dataset.tab))));
+    document.querySelectorAll(".tab-select").forEach((sel) => sel.addEventListener("change", () => show(Number(sel.value))));
+    // Clicking a row picks that setting and that asset group for everything below
+    document.querySelectorAll("tr[data-row]").forEach((row) =>
+      row.addEventListener("click", () => {
+        tab = Number(row.dataset.row);
+        set("group", row.dataset.group);
+        document.getElementById("detail").scrollIntoView({ behavior: "smooth", block: "start" });
+      }),
+    );
     // Keep the explanations open or closed when the bar redraws the page
     document.querySelectorAll("details.guide").forEach((d) => d.addEventListener("toggle", () => (openGuides[d.dataset.guide] = d.open)));
     show(tab);
+  }
+
+  /**
+   * The two questions of our goal, answered in plain words for the best setting in view, then four
+   * cards: per session when a session rule is chosen, per day for "All day".
+   */
+  function verdictAndCards(best, m, showing) {
+    const signalOk = m.firstOrderWinPct >= data.breakEvenPct;
+    const x = sessionOf(vw(best));
+    const card = (label, value, cls, note, status) =>
+      `<div class="panel tile ${status}"><div class="label">${label}</div><div class="value ${cls}">${value}</div><div class="sub">${note}</div></div>`;
+    const signalLine = `<div class="verdict-row ${signalOk ? "ok" : "no"}"><span class="mark">${signalOk ? "✅" : "❌"}</span><div>
+        <b>Does the signal win often enough?</b> ${signalOk ? "Yes" : "No"}: the first order wins <b>${pct(m.firstOrderWinPct)}</b>; it needs more than ${pct(data.breakEvenPct, 1)} to make money.</div></div>`;
+    if (!x || !x.sessions) {
+      const sessionLine = view.session === "all" ? "" : `<div class="verdict-row"><span class="mark">➖</span><div><b>Does a session make money?</b> N/A: no session of this rule had anything to trade.</div></div>`;
+      return `<div class="verdict"><div class="who">${esc(best.label)} · ${showing}</div>${signalLine}${sessionLine}</div>
+        <div class="tiles">
+          ${card("Profit per day", money(m.profitPerDay), sign(m.profitPerDay), `${money(m.profit)} THB over ${m.days} days`, m.profitPerDay > 0 ? "ok" : "no")}
+          ${card("First order wins", pct(m.firstOrderWinPct), signalOk ? "good" : "bad", `Needs ${pct(data.breakEvenPct, 2)} to break even`, signalOk ? "ok" : "no")}
+          ${card("Signals an hour (weekday)", m.signals.weekdaysPerHour.toFixed(0), "", m.roundsInGoal ? `In the goal of ${goalHour().min}-${goalHour().max}` : `Goal ${goalHour().min}-${goalHour().max}`, m.roundsInGoal ? "ok" : "warn")}
+          ${card(`Newest ${data.checkDays} days`, pct(m.check.lastFirstWinPct), m.check.lastFirstWinPct >= data.breakEvenPct ? "good" : "bad", `First order; ${money(m.check.lastPerDay)} THB a day`, m.check.lastFirstWinPct >= data.breakEvenPct ? "ok" : "no")}
+        </div>`;
+    }
+    const tp = x.ended.takeProfit, sl = x.ended.stopLoss;
+    const sessionOk = x.averageProfit > 0;
+    // "Out of 10 sessions": the story behind the average
+    const outOf10 = `About <b>${Math.round(tp.pct / 10)} in 10</b> sessions reach take-profit (${money(tp.averageProfit)} THB each), <b>${Math.round(sl.pct / 10) || "under 1"} in 10</b> hit the stop-loss (${money(sl.averageProfit)} THB each)`;
+    const sessionLine = `<div class="verdict-row ${sessionOk ? "ok" : "no"}"><span class="mark">${sessionOk ? "✅" : "❌"}</span><div>
+        <b>Does a session make money?</b> ${sessionOk ? "Yes" : "No"}: a session ends with <b>${money(x.averageProfit)} THB</b> on average. ${outOf10}.</div></div>`;
+    return `<div class="verdict"><div class="who">${esc(best.label)} · ${showing}</div>${signalLine}${sessionLine}</div>
+      <div class="tiles">
+        ${card("Average session", `${money(x.averageProfit)} THB`, sign(x.averageProfit), "What a session ends with on average: this decides", sessionOk ? "ok" : "no")}
+        ${card("Sessions won", pct(x.inProfitPct, 0), "", "Ended above 0 THB; many small wins can still lose overall", x.inProfitPct >= 50 ? "warn" : "no")}
+        ${card("Stop-loss hit", `${pct(sl.pct, 0)} <span class="unit">of sessions</span>`, sl.oneIn === null ? "good" : "bad", sl.oneIn === null ? "No session lost that much" : `${money(sl.averageProfit)} THB each · after ${Math.round(sl.averageMinutes)} min`, sl.oneIn === null ? "ok" : "no")}
+        ${card("After 20 sessions", x.after20 ? `${money(x.after20.average)} THB` : "N/A", x.after20 ? sign(x.after20.average) : "", x.after20 ? `Most likely ${money(x.after20.low)} to ${money(x.after20.high)}` : "", x.after20 && x.after20.average > 0 ? "ok" : "no")}
+      </div>`;
   }
 
   function show(i) {
@@ -264,12 +452,13 @@
     const v = vw(s);
     const m = v.summary;
     return `
-      <p class="muted" style="margin-top:0"><b>${esc(s.label)}</b> · ${groupNames[view.group]} · x${multiplierOf(s)} · ${levelName(v.levels)}${s.note ? ` · ${esc(s.note)}` : ""}</p>
+      <p class="muted" style="margin-top:0"><b>${esc(s.label)}</b> · ${groupNames[view.group]} · ${ranInstead(s) || `x${view.multiplier} · max open ${openName(view.open)}`} · ${levelName(v.levels)}${s.note ? ` · ${esc(s.note)}` : ""}</p>
       ${levelChips(s, v.levels)}
       <div class="grid2">
-        <div class="panel wide"><h3>How rounds end</h3>${outcomes(m)}${daysTable(m)}</div>
-        <div class="panel"><h3>When to trade <span class="muted small">(Bangkok time)</span></h3>${hoursChart(m.hours)}${hourLists(m)}</div>
-        <div class="panel"><h3>Week by week: is the first-order win steady?</h3>${weeklyChart(m)}</div>
+        ${sessionPanels(v)}
+        <div class="panel wide"><h3>How rounds end <span class="muted small">(every round of the whole day, adding up to 100%)</span></h3>${outcomes(m)}${daysTable(m)}</div>
+        <div class="panel wide"><h3>Does it hold over time? <span class="muted small">(the test in ${m.parts.length} equal stretches, oldest first)</span></h3>${partsTable(m, sessionOf(v))}</div>
+        <div class="panel"><h3>When to trade <span class="muted small">(rounds by the Bangkok hour they start, the whole day)</span></h3>${hoursChart(m.hours)}${hourLists(m)}</div>
         <div class="panel"><h3>Money and risk</h3>${moneyBlocks(m)}</div>
         <div class="panel"><h3>Settings used <span class="muted small">(changed from the bot in blue)</span></h3><div class="kv">
           ${s.groups.map((g) => `<div class="group-name">${esc(g.name)}</div>${g.items.map((it) => `<div>${esc(it.name)}</div>
@@ -282,31 +471,134 @@
       </div>`;
   }
 
-  /** Share of rounds: on which try they were won (or lost), what each earns, and the first try against break-even. */
+  /**
+   * How rounds end, as parts of one whole: one bar split by where each round was won (or lost all),
+   * the share and money of each under it, then the first order against break-even.
+   */
   function outcomes(m) {
     const levels = m.endShares.length - 2;
-    const top = Math.max(...m.endShares) || 1;
-    const rows = m.endShares.map((p, i) => {
-      const lost = i > levels;
-      const hint = lost ? `every one of the ${levels + 1} orders lost` : i === 0 ? "the first order won, no martingale" : `won after ${i} loss${i > 1 ? "es" : ""} (martingale level ${i})`;
-      return `<div class="count ${lost ? "bad" : ""}" title="${hint}">${p >= 1 || p === 0 ? Math.round(p) : "<1"}%</div>
-        <div title="${hint}">${lost ? "❌ Lost all" : i === 0 ? "✅ First order" : `✅ Martingale ${i}`}</div>
-        <div class="track" title="${hint}"><div class="fill" style="width:${(p / top) * 100}%;background:${levelColor(i, levels)}"></div></div>
-        <div class="money ${sign(m.endMoney[i])}">${money(m.endMoney[i])}</div>`;
-    });
+    const name = (i) => (i > levels ? "Lost all" : i === 0 ? "First order" : `Martingale ${i}`);
+    const short = (i) => (i > levels ? "Lost all" : i === 0 ? "First order" : `Mart. ${i}`);
+    const segments = m.endShares.map((p, i) => `<div class="seg" style="width:${p}%;background:${levelColor(i, levels)}" title="${name(i)}: ${pct(p, 1)} of rounds · ${money(m.endMoney[i])} THB each">
+        ${p >= 7 ? `<span class="seg-name">${short(i)}</span><b>${Math.round(p)}%</b>` : ""}</div>`);
+    // "Won in total" sits between the last martingale level and "Lost all": the two add up to 100%
+    const wonShare = m.endShares.slice(0, levels + 1).reduce((a, b) => a + b, 0);
+    const wonMoney = wonShare ? m.endShares.slice(0, levels + 1).reduce((a, p, i) => a + p * m.endMoney[i], 0) / wonShare : 0;
+    const cells = (f, total) => m.endShares.map((p, i) => (i === levels + 1 ? total : "") + f(p, i)).join("");
+    const split = `<div class="split-bar">${segments.join("")}</div>
+      <div class="table-wrap"><table class="split-table"><thead><tr><th></th>${cells((p, i) => `<th><span class="key" style="background:${levelColor(i, levels)}"></span> ${short(i)}</th>`, `<th class="won-total">Won in total</th>`)}</tr></thead>
+        <tbody>
+          <tr><td>Share of rounds</td>${cells((p, i) => `<td class="${i > levels ? "bad" : ""}">${p >= 1 || p === 0 ? Math.round(p) : "<1"}%</td>`, `<td class="won-total good">${pct(wonShare, 0)}</td>`)}</tr>
+          <tr><td title="What one whole round ends with when it ends this way: the winning order minus the orders lost before it">Money per round (THB)</td>${cells((p, i) => `<td class="${sign(m.endMoney[i])}">${money(m.endMoney[i])}</td>`, `<td class="won-total ${sign(wonMoney)}" title="A winning round's money on average">${money(wonMoney)} avg</td>`)}</tr>
+        </tbody></table></div>`;
     const gap = m.firstOrderWinPct - data.breakEvenPct;
     const ok = gap >= 0;
     const lo = 40, hi = 60, at = (v) => Math.min(100, Math.max(0, ((v - lo) / (hi - lo)) * 100));
     const why = ok
       ? "The first order wins often enough to make money."
       : `Martingale turns ${m.roundWinPct.toFixed(0)} of 100 rounds into wins, but the lost rounds cost more than all the wins bring.`;
-    return `<div class="outcomes">
-        <div class="head" style="text-align:right;white-space:nowrap">Share</div><div class="head">of rounds</div><div></div><div class="head" style="text-align:right">THB each</div>
-        ${rows.join("")}</div>
+    return `${split}
       <div class="verdict-line" title="${why}">
         <span>First order wins <b class="${ok ? "good" : "bad"}">${m.firstOrderWinPct.toFixed(1)}%</b></span>
         <div class="gauge"><div class="val" style="width:${at(m.firstOrderWinPct)}%;background:${ok ? "var(--good)" : "var(--bad)"}"></div><div class="mark" style="left:${at(data.breakEvenPct)}%"></div></div>
         <span>needs <b>${data.breakEvenPct.toFixed(1)}%</b> &nbsp;${ok ? `✅ ${gap.toFixed(1)} above` : `❌ ${(-gap).toFixed(1)} short`}</span>
+      </div>`;
+  }
+
+  /** The chosen session rule: how sessions end, what 20 sessions bring, and the start hours. */
+  function sessionPanels(v) {
+    if (view.session === "all") return "";
+    const x = sessionOf(v);
+    if (!x || !x.sessions) return `<div class="panel wide"><h3>Sessions <span class="muted small">${sessionName(view.session)}</span></h3><p class="muted">N/A: no session of this rule had a round to play.</p></div>`;
+    // How sessions end, as parts of one whole: each way a session ends, split into won and lost
+    const ENDS = [
+      ["takeProfit", "Reached take-profit", "Take-profit", "#1f9d55", "#8fd1ab"],
+      ["stopLoss", "Hit the stop-loss", "Stop-loss", "#d64545", "#d64545"],
+      ["time", "Time was up", "Time up", "#3b6fd8", "#9db7ec"],
+    ];
+    const pieces = ENDS.flatMap(([key, , short, wonColour, lostColour]) => {
+      const e = x.ended[key];
+      // The stop-loss never ends in profit, so its part needs no "won / lost"
+      return key === "stopLoss"
+        ? [{ label: short, pct: e.pct, colour: wonColour }]
+        : [
+            { label: `${short} · won`, pct: e.wonPct, colour: wonColour },
+            { label: `${short} · lost`, pct: e.lostPct, colour: lostColour },
+          ];
+    });
+    const endBar = `<div class="split-bar">${pieces
+      .filter((p) => p.pct > 0)
+      .map((p) => `<div class="seg" style="width:${p.pct}%;background:${p.colour}" title="${p.label}: ${pct(p.pct, 1)} of sessions">
+        ${p.pct >= 5 ? `<span class="seg-name">${p.label}</span><b>${Math.round(p.pct)}%</b>` : ""}</div>`)
+      .join("")}</div>`;
+    const endRows = ENDS.map(([key, title, , wonColour]) => {
+      const e = x.ended[key];
+      return `<tr><td><span class="key" style="background:${wonColour}"></span> ${title}</td><td>${pct(e.pct, 0)}</td>
+        <td class="good">${pct(e.wonPct, 0)}</td><td class="bad">${pct(e.lostPct, 0)}</td>
+        <td class="${sign(e.averageProfit)}" title="${e.oneIn === null ? "" : `from ${money(e.lowest)} to ${money(e.highest)} THB`}">${e.oneIn === null ? "-" : money(e.averageProfit)}</td>
+        <td class="muted">${e.oneIn === null ? "-" : Math.round(e.averageMinutes)}</td></tr>`;
+    });
+    const endTable = `${endBar}
+      <div class="table-wrap"><table class="end-table"><thead><tr><th>How the session ended</th><th>Sessions</th><th>Won</th><th>Lost</th><th>Money per session (THB)</th><th>Minutes</th></tr></thead>
+        <tbody>${endRows.join("")}
+          <tr class="total-row"><td>All sessions</td><td>100%</td><td class="good">${pct(x.inProfitPct, 0)}</td><td class="bad">${pct(100 - x.inProfitPct, 0)}</td>
+            <td class="${sign(x.averageProfit)}">${money(x.averageProfit)} on average</td><td class="muted">${x.sessions.toLocaleString("en-US")} sessions</td></tr>
+        </tbody></table></div>`;
+    // Start hours as a 24-hour strip, coloured by the average session
+    const byHour = new Map(x.hours.map((h) => [h.hour, h]));
+    const top3 = x.hours.filter((h) => h.averageProfit > 0).slice(0, 3).map((h) => h.hour);
+    // Coloured by the share of sessions won: green from WON_GREEN up, red below it. A losing average is
+    // marked on its own, so a green hour that still loses money is not mistaken for a good one
+    const WON_GREEN = 80;
+    const cell = (hour) => {
+      const h = byHour.get(hour);
+      if (!h) return `<div class="hour na" title="${clock(hour)}: nothing to trade">${String(hour).padStart(2, "0")}<span>N/A</span></div>`;
+      const green = h.inProfitPct >= WON_GREEN;
+      const strength = 0.15 + 0.85 * Math.min(1, green ? (h.inProfitPct - WON_GREEN) / (100 - WON_GREEN) : (WON_GREEN - h.inProfitPct) / 30);
+      const colour = green ? `rgba(31, 157, 85, ${strength.toFixed(2)})` : `rgba(214, 69, 69, ${strength.toFixed(2)})`;
+      const avg = h.averageProfit < 0 ? `<b class="avg-lost">${short(h.averageProfit)} avg</b>` : `${short(h.averageProfit)} avg`;
+      return `<div class="hour${top3.includes(hour) ? " top" : ""}" style="background:${colour};${strength > 0.55 ? "color:#fff" : ""}"
+        title="${clock(hour)}: won ${Math.round((h.inProfitPct * h.sessions) / 100)} of ${h.sessions} sessions · average ${money(h.averageProfit)} THB · worst ${money(h.worst)} THB">
+        ${String(hour).padStart(2, "0")}:00<span class="won-pct">${pct(h.inProfitPct, 0)}</span><span>won · ${avg}</span></div>`;
+    };
+    const bestHours = top3.length
+      ? `Best start hours: ${top3.map((hr) => `<b>${clock(hr)}</b> (${pct(byHour.get(hr).inProfitPct, 0)} won, ${money(byHour.get(hr).averageProfit)} THB on average)`).join(", ")}. With ${byHour.get(top3[0]).sessions} sessions each, treat them as hints, not proof.`
+      : "No start hour made money on average.";
+    return `<div class="panel wide"><h3>Sessions <span class="muted small">${sessionName(view.session)} (${sessionThb(view.session)} at this martingale)</span></h3>
+      ${endTable}
+      ${chainsChoice(x)}
+      <div class="grid2" style="margin-top:14px">
+        <div class="money-grid">
+          ${moneyRow("🎲", "After 20 sessions, most likely", x.after20 ? `${money(x.after20.low)} to ${money(x.after20.high)} THB` : "N/A", x.after20 ? `The middle 80% of 2,000 random picks of 20 sessions; ${money(x.after20.average)} THB on average` : "")}
+          ${moneyRow("🏦", "Worst session", `${money(x.worst)} THB`, "Keep at least this before a session: rounds still running at a stop finish, and with many assets at once they can take it well past the stop-loss")}
+          ${moneyRow("📅", `Newest ${data.checkDays} days`, x.last2Weeks.sessions ? `${money(x.last2Weeks.averageProfit)} THB a session` : "N/A", x.last2Weeks.sessions ? `${pct(x.last2Weeks.inProfitPct, 0)} of sessions won` : "")}
+        </div>
+        <div>
+          <div class="k-title">When to start a session <span class="muted small">(Bangkok time · % of sessions won · green from ${WON_GREEN}% won · <b class="avg-lost">red average</b> = the hour lost money on average; hover for more)</span></div>
+          <div class="hours-strip">${Array.from({ length: 24 }, (_, hour) => cell(hour)).join("")}</div>
+          <p class="note">${bestHours}${x.empty ? ` ${x.empty.toLocaleString("en-US")} sessions had nothing to trade (N/A).` : ""}</p>
+        </div>
+      </div></div>`;
+  }
+
+  /**
+   * When a session ends while martingale chains are still running on other assets: let them finish
+   * (as the results above assume) or stop them, and which did better.
+   */
+  function chainsChoice(x) {
+    const stop = x.ifChainsStopped;
+    if (!stop) return "";
+    const finish = { averageProfit: x.averageProfit, inProfitPct: x.inProfitPct, worst: x.worst };
+    const better = stop.averageProfit > finish.averageProfit ? "stop" : "finish";
+    const option = (key, title, how, r) => `<div class="chain-option${better === key ? " better" : ""}">
+        <div class="chain-title">${title}${better === key ? ` <span class="badge good-badge">Better</span>` : ""}</div>
+        <div class="muted small">${how}</div>
+        <div class="chain-nums"><span><b class="${sign(r.averageProfit)}">${money(r.averageProfit)} THB</b> a session</span><span><b>${pct(r.inProfitPct, 0)}</b> of sessions won</span><span>worst <b class="bad">${money(r.worst)}</b></span></div>
+      </div>`;
+    return `<div class="k-title" style="margin-top:16px">When the session ends, martingale chains still running on other assets…</div>
+      <div class="chain-choice">
+        ${option("finish", "Let them finish", "Every round plays out its martingale (the results above)", finish)}
+        ${option("stop", "Stop them", "No more orders once the session ends; only orders already placed count", stop)}
       </div>`;
   }
 
@@ -315,11 +607,11 @@
     const levels = m.endShares.length - 2;
     const first = (g) => (g.roundsPerDay > 0 ? `<span class="${g.firstWinPct >= data.breakEvenPct ? "good" : "bad"}">${pct(g.firstWinPct)}</span>` : "-");
     const share = (g, i) => (g.roundsPerDay > 0 ? pct(g.ends[i] ?? 0, 0) : "-");
-    const row = (name, g) => `<tr><td>${name}</td><td>${g.roundsPerDay.toFixed(0)}</td><td>${first(g)}</td>
+    const row = (name, g) => `<tr><td>${name}</td><td>${perHour(g.roundsPerDay).toFixed(0)}</td><td>${first(g)}</td>
       ${Array.from({ length: levels }, (_, i) => `<td>${share(g, i + 1)}</td>`).join("")}<td class="bad">${share(g, levels + 1)}</td>
       <td class="${sign(g.profitPerDay)}">${money(g.profitPerDay)}</td></tr>`;
     const all = { roundsPerDay: m.roundsPerDay, firstWinPct: m.firstOrderWinPct, ends: m.endShares, profitPerDay: m.profitPerDay };
-    return `<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th></th><th>Rounds a day</th><th title="${esc(guideText("First-order win"))}">First order</th>
+    return `<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th></th><th>Rounds an hour</th><th title="${esc(guideText("First-order win"))}">First order</th>
         ${Array.from({ length: levels }, (_, i) => `<th>Mart. ${i + 1}</th>`).join("")}<th>Lost all</th><th>Profit a day</th></tr></thead>
       <tbody>${row("All days", all)}${row("Weekday", m.weekdays)}${row("Weekend day", m.weekend)}${row(`Newest ${data.checkDays} days`, m.last2Weeks)}</tbody></table></div>
       <div class="legend-line"><span>🗓 Weekend = Saturday and Sunday, Bangkok time. Main assets almost stop (only crypto trades).</span><span>🎯 The rounds goal counts weekdays.</span></div>`;
@@ -349,35 +641,21 @@
       <p class="note">Each bar is one hour of the day: the money rounds starting in that hour made over the whole test. Hover a bar for details.</p>`;
   }
 
-  /** First-order win week by week against break-even: does the edge hold over time, or was it one good stretch? */
-  function weeklyChart(m) {
-    const weeks = m.weekly.filter((w) => w.rounds > 0);
-    if (!weeks.length) return `<p class="muted">No rounds.</p>`;
-    const w = 480, h = 170, left = 34, right = 8, top = 10, bottom = 26;
-    const lo = Math.min(40, ...weeks.map((x) => Math.floor(x.firstWinPct))), hi = Math.max(60, ...weeks.map((x) => Math.ceil(x.firstWinPct)));
-    const y = (v) => top + ((hi - v) / (hi - lo)) * (h - top - bottom);
-    const bw = (w - left - right) / weeks.length;
-    const bars = weeks.map((x, i) => {
-      const ok = x.firstWinPct >= data.breakEvenPct;
-      const y0 = y(Math.max(lo, 50)), y1 = y(x.firstWinPct);
-      return `<rect x="${left + i * bw + 3}" y="${Math.min(y0, y1)}" width="${bw - 6}" height="${Math.max(1, Math.abs(y1 - y0))}" rx="2" fill="${ok ? "var(--good)" : "var(--bad)"}">
-          <title>week of ${longDay(x.week)} · ${x.rounds.toLocaleString("en-US")} rounds · first order wins ${pct(x.firstWinPct)}</title></rect>
-        <text x="${left + i * bw + bw / 2}" y="${h - 8}" text-anchor="middle">${dm(x.week)}</text>`;
+  /** Each stretch of the test: rounds a day, where rounds were won, and how sessions did. */
+  function partsTable(m, x) {
+    const levels = m.endShares.length - 2;
+    const fmt = (d) => `${Number(d.slice(8))} ${MONTHS[Number(d.slice(5, 7)) - 1]}`;
+    const rows = m.parts.map((p, i) => {
+      const sp = x?.parts?.[i];
+      const won = p.firstWinPct >= data.breakEvenPct;
+      return `<tr><td>${fmt(p.from)} – ${fmt(p.to)}</td><td>${perHour(p.roundsPerDay).toFixed(0)}</td>
+        <td class="${won ? "good" : "bad"}">${pct(p.firstWinPct)}</td>
+        ${Array.from({ length: levels }, (_, l) => `<td>${pct(p.ends[l + 1] ?? 0, 0)}</td>`).join("")}<td class="bad">${pct(p.ends[levels + 1] ?? 0, 0)}</td>
+        ${x ? (sp && sp.sessions ? `<td class="${sign(sp.averageProfit)}">${money(sp.averageProfit)}</td><td>${pct(sp.inProfitPct, 0)}</td>` : `<td>${"N/A"}</td><td>N/A</td>`) : ""}</tr>`;
     });
-    const ticks = [lo, 50, hi].map((v) => `<text x="${left - 6}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`).join("");
-    const above = weeks.filter((x) => x.firstWinPct >= data.breakEvenPct).length;
-    const verdict =
-      above === weeks.length ? "✅ steady, an edge every week"
-      : above >= weeks.length * 0.75 ? "✅ mostly steady"
-      : above === 0 ? "❌ no edge in any week"
-      : "⚠️ not steady, an edge in some weeks only (may be luck)";
-    return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="First-order win by week">${ticks}
-        <line x1="${left}" x2="${w - right}" y1="${y(50)}" y2="${y(50)}" stroke="var(--line)"/>
-        ${bars.join("")}
-        <line x1="${left}" x2="${w - right}" y1="${y(data.breakEvenPct)}" y2="${y(data.breakEvenPct)}" stroke="var(--text)" stroke-dasharray="4 3"/>
-        <text x="${w - right}" y="${y(data.breakEvenPct) - 4}" text-anchor="end">break-even ${pct(data.breakEvenPct, 1)}</text></svg>
-      <p class="verdict"><b>${above} of ${weeks.length} weeks</b> above break-even: ${verdict}</p>
-      <div class="legend-line"><span>each bar: one week's first-order win (weeks start Monday; hover for rounds)</span></div>`;
+    return `<div class="table-wrap"><table><thead><tr><th>Days</th><th>Rounds an hour</th><th>First order <span class="goal">needs ${pct(data.breakEvenPct, 1)}</span></th>
+        ${Array.from({ length: levels }, (_, l) => `<th>Mart. ${l + 1}</th>`).join("")}<th>Lost all</th>
+        ${x ? `<th>Average session</th><th>Sessions won</th>` : ""}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
   }
 
   /** One line: this setting's profit per day at each max martingale; ⭐ best; click to switch the page. */
@@ -389,6 +667,8 @@
         ${v.levels === 0 ? "None" : v.levels} <b class="${sign(v.summary.profitPerDay)}">${money(v.summary.profitPerDay)}</b>${v.levels === best ? " ⭐" : ""}</button>`).join("")}</div>`;
   }
 
+  const moneyRow = (icon, k, v, s, cls = "") => `<div class="money-row"><div class="icon">${icon}</div><div><div class="k">${k}</div><div class="v ${cls}">${v}</div><div class="s">${s}</div></div></div>`;
+
   /** The money numbers, and how busy the app is, as plain statements. */
   function moneyBlocks(m) {
     const row = (icon, k, v, s, cls = "") => `<div class="money-row"><div class="icon">${icon}</div><div><div class="k">${k}</div><div class="v ${cls}">${v}</div><div class="s">${s}</div></div></div>`;
@@ -398,7 +678,7 @@
       ${row("🏦", "Balance to keep", `${money(-m.biggestDrop).replace("+", "")} THB`, "the deepest the total fell from its best point; less than this in the account and a bad run would stop you")}
       ${row("❌", "Rounds that lose all orders", m.fullLossEvery, `each costs ${money(m.worstRound)} THB`)}
       ${row("🔁", "Most rounds open at the same time", `${m.mostAtOnce}`, "across all assets; this much money can be tied up at once")}
-      ${row("⏱️", "How busy the app is", `${m.weekdays.roundsPerDay.toFixed(0)} rounds a weekday · ${m.roundsPerHour.toFixed(0)} an hour`, `${m.roundsInGoal ? "✅ inside" : "⚠️ outside"} the goal of ${data.roundsGoal.min}-${data.roundsGoal.max} a weekday${m.quietMinutes === null ? "" : `; 9 in 10 waits for a new round are ${m.quietMinutes} min or less`}`)}
+      ${row("⏱️", "How busy the app is", `${m.signals.weekdaysPerHour.toFixed(0)} signals an hour on a weekday`, `${perHour(m.weekdays.roundsPerDay).toFixed(0)} of them became rounds; ${m.roundsInGoal ? "✅ inside" : "⚠️ outside"} the goal of ${goalHour().min}-${goalHour().max} signals an hour${m.quietMinutes === null ? "" : `; 9 in 10 waits for a new round are ${m.quietMinutes} min or less`}`)}
     </div>`;
   }
   render();

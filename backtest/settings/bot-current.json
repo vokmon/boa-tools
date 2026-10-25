@@ -1,9 +1,9 @@
 {
-  "note": "The bot's current settings (iq-robot as of 22/10/2026), with 4 martingale levels, at x2.5 (the bot) and x2.2",
-  "supportResistance": { "period": 25, "zone": 0.92 },
-  "donchian": { "period": 20 },
-  "bollinger": { "period": 14, "stdDev": 2 },
-  "stochastic": { "k": 13, "d": 3, "smooth": 3, "level": 85 },
+  "note": "The bot's current settings (iq-robot as of 22/10/2026), with 4 martingale levels, at x2.5 (the bot) and x2.2, and with at most 1, 2, 3 or any number of rounds open at once",
+  "supportResistance": { "use": true, "period": 25, "zone": 0.92 },
+  "donchian": { "use": true, "period": 20 },
+  "bollinger": { "use": true, "period": 14, "stdDev": 2 },
+  "stochastic": { "use": true, "k": 13, "d": 3, "smooth": 3, "level": 85 },
   "candle": {
     "sameColourInARow": 3,
     "minBody": 0.6,
@@ -14,5 +14,12 @@
     "sizeLookback": 35
   },
   "martingale": { "type": "standard", "multiplier": [2.5, 2.2], "levels": 4 },
-  "order": { "amount": 30, "payout": 85 }
+  "order": { "amount": 30, "payout": 85 },
+  "trading": { "maxOpenRounds": [1, 2, 3, 0] },
+  "sessions": [
+    { "minutes": 30, "takeProfitMultiplier": 10, "stopLossRounds": 1 },
+    { "minutes": 30, "takeProfitMultiplier": 30, "stopLossRounds": 1 },
+    { "minutes": 60, "takeProfitMultiplier": 10, "stopLossRounds": 1 },
+    { "minutes": 60, "takeProfitMultiplier": 30, "stopLossRounds": 2 }
+  ]
 }

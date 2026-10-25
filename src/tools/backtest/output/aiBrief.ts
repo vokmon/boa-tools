@@ -1,6 +1,7 @@
 import type { BacktestResult, SettingResult } from "../runBacktest";
 import { NUMBER_FIELDS } from "../settings/fields";
 import { defaultValues } from "../settings/settingsFile";
+import { sessionLabel } from "@/domain/backtest/sessions";
 import { changesFromBot, finishedRounds, fullLossEvery, hourList, inRoundsGoal, money, ordered, percent, share } from "./format";
 
 /**
@@ -49,13 +50,13 @@ export function aiBrief(run: BacktestResult): string {
     "I want a **compromise** setting that makes money across all assets per day, not one that never loses: losing rounds",
     "are fine when the other rounds cover them. Targets:",
     "- **first order wins more than the break-even below** (54.1% at 85% payout): the one number that decides profit",
-    "- **600-1000 rounds a weekday**, all assets together (about 25-42 an hour; the bot trades ~880 today). About 3 in 4",
+    "- **25-42 signals an hour on a weekday**, all assets together (the bot's signal fires about 70 an hour today). About 3 in 4",
     "  rounds are on OTC assets today; main assets have ~43,000 candles a day, so the goal does not need OTC",
     "- **max martingale 4 or less** (more is too risky)",
     "- **tested at martingale x2.5 and x2.2**: put `\"multiplier\": [2.5, 2.2]` in every file you suggest",
     "- **still profitable on the newest 2 weeks**",
     "- keep the Donchian, Bollinger and support/resistance periods as they are; tune zone, stochastic level, candle rules (shape and size)",
-    "- if nothing reaches the break-even at 600+ rounds a day, also suggest the best setting at fewer rounds",
+    "- if nothing reaches the break-even at 25+ signals an hour, also suggest the best setting at fewer signals",
     "",
     "What we know: OTC prices are made by IQ Option itself and behave like a coin flip: every test reversed 49.7-50.3% on",
     "OTC. Main assets lean toward reversing: a solid candle with no wick against the move reversed 53.4%, a long rejection",
@@ -95,6 +96,29 @@ export function aiBrief(run: BacktestResult): string {
       ),
     ),
     "",
+    "Sessions (how we trade): a session starts at every Bangkok hour of every day and ends at its time, its take-profit or",
+    "its stop-loss, whichever comes first; at each setting's own max martingale, all assets:",
+    "",
+    table(
+      ["Setting", "Session rule", "Average session", "In profit", "Take-profit (1 in N, minutes)", "Stop-loss (1 in N, minutes)", "Worst session", "After 20 sessions (middle 80%)", "Best start hours"],
+      rows.flatMap((r) =>
+        r.groups.total.sessions.map((x) => {
+          const end = (e: { oneIn: number | null; averageMinutes: number }) => (e.oneIn === null ? "never" : `1 in ${e.oneIn.toFixed(1)}, ${Math.round(e.averageMinutes)} min`);
+          return [
+            r.setting.label,
+            sessionLabel(x.rule),
+            x.sessions ? money(x.averageProfit) : "N/A",
+            x.sessions ? percent(x.inProfitPct, 0) : "N/A",
+            end(x.ended.takeProfit),
+            end(x.ended.stopLoss),
+            x.sessions ? money(x.worst) : "N/A",
+            x.after20 ? `${money(x.after20.low)} to ${money(x.after20.high)}` : "N/A",
+            x.hours.slice(0, 3).map((h) => `${String(h.hour).padStart(2, "0")}:00 ${money(h.averageProfit)}`).join(", "),
+          ];
+        }),
+      ),
+    ),
+    "",
     "Profit per day of the same signal at each martingale level (0 = no martingale):",
     "",
     table(["Setting", ...rows[0]!.levels.map((l) => (l.levels === 0 ? "No martingale" : `Up to ${l.levels}`)), "Lost all at its own level"], rows.map((r) => [r.setting.label, ...r.levels.map((l) => money(l.summary.profitPerDay)), share(r.summary.lost, finishedRounds(r))])),
@@ -107,7 +131,7 @@ export function aiBrief(run: BacktestResult): string {
     "",
     "A JSON file with only the values to change; anything left out stays at the bot's value. A list (e.g. `\"period\": [14, 18, 22]`)",
     "tries each value. `\"hours\": [\"07-11\", \"20-23\"]` only starts rounds in those Bangkok hours. `martingale.type` is",
-    "`\"standard\"` or `\"recovery\"`.",
+    "`\"standard\"`, `\"recovery\"` or `\"cover\"`. `\"sessions\"` is required: copy the list from the example below (how we trade).",
     "",
     table(
       ["Setting", "Meaning", "Bot value", "Allowed", "Worth trying"],
@@ -117,14 +141,14 @@ export function aiBrief(run: BacktestResult): string {
     "Example:",
     "",
     "```json",
-    JSON.stringify({ note: "why this is worth trying", stochastic: { level: 90 }, candle: { sameColourInARow: 4 }, hours: ["07-11", "20-23"] }, null, 2),
+    JSON.stringify({ note: "why this is worth trying", stochastic: { level: 90 }, candle: { sameColourInARow: 4 }, sessions: first.sessions }, null, 2),
     "```",
     "",
     "## What I need",
     "",
     "Suggest **3 to 5 new settings files** to try next. For each: a short file name (kebab-case), the JSON, and one line",
     "on why, based on the results above (which changes helped, which hurt, which hours to keep). Prefer settings that",
-    "keep profit per day positive in the last 2 weeks too, lose all levels rarely, and do not need more than 4 levels.",
+    "keep the average session positive, also in the last 2 weeks, lose all levels rarely, and do not need more than 4 levels.",
     "",
   ].join("\n");
 }

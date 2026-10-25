@@ -131,6 +131,37 @@ describe("knobs iq-robot hard-codes", () => {
   });
 });
 
+describe("switching rules on and off", () => {
+  test("a rule switched off only adds signals", () => {
+    const off: Partial<SignalSettings>[] = [{ useSupportResistance: false }, { useDonchian: false }, { useBollinger: false }, { useStochastic: false }];
+    for (const { candles } of series) {
+      const engine = new SignalEngine(candles, SIZE);
+      const a = engine.signals();
+      for (const loose of off) {
+        const b = engine.signals(withDefaults(loose));
+        for (let i = 0; i < a.length; i++) if (a[i] !== 0) expect(b[i]).toBe(a[i]!);
+      }
+    }
+  });
+
+  test("with the price rules off, a signal is just the same-colour run against its direction", () => {
+    const { candles } = series[0]!;
+    const engine = new SignalEngine(candles, SIZE);
+    const off = { useSupportResistance: false, useDonchian: false, useBollinger: false, useStochastic: false, consecutiveCandles: 3, minBodyRatio: 0, maxRejectionWickRatio: 1, minCandleSizeRatio: 0 };
+    const signals = engine.signals(withDefaults(off));
+    const runs = consecutiveColours(Float64Array.from(candles, (c) => c.open), Float64Array.from(candles, (c) => c.close));
+    let checked = 0;
+    for (let i = 100; i < candles.length; i++) {
+      // A zero-range candle has no wick ratio to pass; skip those
+      if (candles[i]!.max === candles[i]!.min || signals[i] === 0) continue;
+      expect(signals[i]).toBe(runs[i]! >= 3 ? -1 : 1);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(100);
+    expect(count(signals).put + count(signals).call).toBeGreaterThan(count(engine.signals()).put + count(engine.signals()).call);
+  });
+});
+
 describe("gaps", () => {
   test("no signal while the window crosses a market gap", () => {
     const { candles } = series[0]!;

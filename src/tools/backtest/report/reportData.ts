@@ -1,8 +1,9 @@
-import { CHECK_DAYS, ROUNDS_PER_DAY_GOAL, type GroupStat } from "@/domain/backtest/summary";
-import { ASSET_GROUPS, type AssetGroup, type BacktestResult, type GroupResult, type LevelResult, type SettingResult } from "../runBacktest";
+import { CHECK_DAYS, ROUNDS_PER_DAY_GOAL, type GroupStat, type PartStat } from "@/domain/backtest/summary";
+import { ASSET_GROUPS, type AssetGroup, type BacktestResult, type GroupResult, type LevelResult, type SettingResult, type SignalRate } from "../runBacktest";
 import { defaultValues } from "../settings/settingsFile";
 import { CHOICE_FIELDS, NUMBER_FIELDS } from "../settings/fields";
 import { DEFAULT_MARTINGALE, roundOutcomes } from "@/domain/backtest/martingale";
+import { sessionLabel, type SessionSummary } from "@/domain/backtest/sessions";
 import { breakEvenPct, changesFromBot, fullLossEvery, inRoundsGoal, ordered } from "../output/format";
 import { RESULT_GUIDE, SETTING_GROUPS, SETTING_GUIDE } from "./guide";
 
@@ -22,7 +23,11 @@ export interface ReportData {
   /** What the bar at the top switches between. */
   groupOptions: AssetGroup[];
   multiplierOptions: number[];
+  /** Most rounds open at once; 0 = no limit. */
+  maxOpenOptions: number[];
   levelOptions: number[];
+  /** Session rules, by label ("60 min · +10x order · 1 lost round"), in the order the files list them. */
+  sessionOptions: string[];
   guide: {
     results: typeof RESULT_GUIDE;
     groups: { key: string; name: string; about: string; settings: { path: string; name: string; text: string; higher: string; bot: string }[] }[];
@@ -37,7 +42,7 @@ export interface ReportSetting {
   changes: string[];
   /** Settings by group, each value marked when it differs from the bot. */
   groups: { name: string; items: { name: string; value: string; bot: string; changed: boolean }[] }[];
-  /** views[multiplier][asset group][max martingale level] */
+  /** views["multiplier|max open"][asset group][max martingale level] */
   views: Record<string, Record<AssetGroup, Record<string, ReportView>>>;
 }
 
@@ -46,6 +51,8 @@ export interface ReportView {
   levels: number;
   summary: {
     roundsPerDay: number;
+    /** How often the signal fires per hour: all days, weekdays, the weekend. */
+    signals: SignalRate;
     /** Weekdays, the weekend (Saturday and Sunday, Bangkok time) and the newest 2 weeks. */
     weekdays: GroupStat;
     weekend: GroupStat;
@@ -61,7 +68,8 @@ export interface ReportView {
     /** THB a round ends with for each of those (lost all negative). */
     endMoney: number[];
     /** First-order win week by week, oldest first. */
-    weekly: { week: string; rounds: number; firstWinPct: number }[];
+    /** The test in equal stretches, oldest first: where rounds were won in each. */
+    parts: PartStat[];
     lostPct: number;
     profit: number;
     profitPerDay: number;
@@ -78,23 +86,45 @@ export interface ReportView {
   };
   bestAssets: { name: string; rounds: number; profit: number }[];
   worstAssets: { name: string; rounds: number; profit: number }[];
+  /** Per session rule label: how sessions went. */
+  sessions: Record<string, SessionSummary>;
 }
 
 const MULTIPLIER = "martingale.multiplier";
+const MAX_OPEN = "trading.maxOpenRounds";
+const LEVELS = "martingale.levels";
+/**
+ * Switched in the page's bar rather than shown as separate settings. Every setting is run at every
+ * martingale level anyway, so a list of levels in a file adds no rows either.
+ */
+const SWITCHED = new Set([MULTIPLIER, MAX_OPEN, LEVELS]);
 
-/** "x [a=1, martingale.multiplier=2.5]" -> "x [a=1]"; "x [martingale.multiplier=2.5]" -> "x" */
-function withoutMultiplier(label: string): string {
-  return label.replace(/martingale\.multiplier=[^,\]]*(, )?/, "").replace(/, \]/, "]").replace(/ \[\]$/, "");
+/** A view's key: the multiplier and the most rounds open at once, e.g. "2.5|0". */
+export const variantKey = (multiplier: number, maxOpen: number) => `${multiplier}|${maxOpen}`;
+
+/**
+ * "x [stochastic.level=95, candle.maxWick=0.1, martingale.multiplier=2.5]" -> "x · Extreme level 95 ·
+ * Max wick against the move 0.1": the settings' own names, without the switched ones.
+ */
+function readableLabel(label: string): string {
+  const match = /^(.*?) \[(.*)\]$/.exec(label);
+  if (!match) return label;
+  const parts = match[2]!
+    .split(", ")
+    .map((pair) => pair.split("="))
+    .filter(([path]) => !SWITCHED.has(path!))
+    .map(([path, value]) => `${(SETTING_GUIDE[path!]?.name ?? path!).replace(/ \(.*\)$/, "")} ${value}`);
+  return [match[1], ...parts].join(" · ");
 }
 
 export function reportData(run: BacktestResult): ReportData {
   const rows = ordered(run.results);
   const first = rows[0]!.setting;
   const defaults = defaultValues();
-  // Settings that differ only in the multiplier become one signal, in the order they first appear
+  // Settings that differ only in the multiplier or max open rounds become one signal, in the order they first appear
   const signals = new Map<string, SettingResult[]>();
   for (const r of rows) {
-    const key = JSON.stringify([r.setting.file, Object.entries(r.setting.values).filter(([path]) => path !== MULTIPLIER)]);
+    const key = JSON.stringify([r.setting.file, Object.entries(r.setting.values).filter(([path]) => !SWITCHED.has(path))]);
     signals.set(key, [...(signals.get(key) ?? []), r]);
   }
   const multipliers = [...new Set(rows.map((r) => r.setting.martingale.multiplier))];
@@ -113,6 +143,9 @@ export function reportData(run: BacktestResult): ReportData {
     // The bot's multiplier first, so the page opens on it
     multiplierOptions: [...multipliers].sort((a, b) => Number(b === DEFAULT_MARTINGALE.multiplier) - Number(a === DEFAULT_MARTINGALE.multiplier) || b - a),
     levelOptions: [...new Set(rows.flatMap((r) => r.levels.map((l) => l.levels)))].sort((a, b) => a - b),
+    // 1, 2, 3 … then 0 (no limit) last
+    maxOpenOptions: [...new Set(rows.map((r) => r.setting.maxOpenRounds))].sort((a, b) => (a || Infinity) - (b || Infinity)),
+    sessionOptions: [...new Set(rows.flatMap((r) => r.setting.sessions.map(sessionLabel)))],
     guide: {
       results: RESULT_GUIDE,
       groups: SETTING_GROUPS.map((g) => ({
@@ -127,12 +160,13 @@ export function reportData(run: BacktestResult): ReportData {
   };
 }
 
-function setting(variants: readonly SettingResult[], defaults: Record<string, number | string>): ReportSetting {
+function setting(variants: readonly SettingResult[], defaults: Record<string, number | string | boolean>): ReportSetting {
   const r = variants[0]!;
-  const changes = changesFromBot(r.setting.values).filter((c) => !c.startsWith(MULTIPLIER));
-  const multipliers = variants.map((v) => v.setting.martingale.multiplier);
+  const changes = changesFromBot(r.setting.values).filter((c) => !SWITCHED.has(c.split(" ")[0]!));
+  const multipliers = [...new Set(variants.map((v) => v.setting.martingale.multiplier))];
+  const maxOpen = [...new Set(variants.map((v) => v.setting.maxOpenRounds))];
   return {
-    label: withoutMultiplier(r.setting.label),
+    label: readableLabel(r.setting.label),
     ...(r.setting.note ? { note: r.setting.note } : {}),
     isBot: changes.length === 0,
     changes,
@@ -141,18 +175,28 @@ function setting(variants: readonly SettingResult[], defaults: Record<string, nu
       items: [...NUMBER_FIELDS.map((f) => f.path), ...Object.keys(CHOICE_FIELDS)]
         .filter((path) => path.startsWith(`${g.key}.`))
         .map((path) =>
-          path === MULTIPLIER
+          path === LEVELS
+            ? { name: SETTING_GUIDE[path]?.name ?? path, value: "switched at the top", bot: String(defaults[path]), changed: false }
+            : path === MULTIPLIER
             ? { name: SETTING_GUIDE[path]?.name ?? path, value: multipliers.join(" / "), bot: String(defaults[path]), changed: multipliers.some((m) => m !== defaults[path]) }
-            : { name: SETTING_GUIDE[path]?.name ?? path, value: String(r.setting.values[path]), bot: String(defaults[path]), changed: r.setting.values[path] !== defaults[path] },
+            : path === MAX_OPEN
+              ? { name: SETTING_GUIDE[path]?.name ?? path, value: maxOpen.map((n) => n || "no limit").join(" / "), bot: "no limit", changed: maxOpen.some((n) => n !== 0) }
+              : { name: SETTING_GUIDE[path]?.name ?? path, value: String(r.setting.values[path]), bot: String(defaults[path]), changed: r.setting.values[path] !== defaults[path] },
         ),
     })).concat(r.setting.values.hours ? [{ name: "Hours", items: [{ name: "Start rounds only", value: (r.setting.values.hours as string[]).join(", "), bot: "all day", changed: true }] }] : []),
-    views: Object.fromEntries(
-      variants.map((v) => [
-        String(v.setting.martingale.multiplier),
-        Object.fromEntries(ASSET_GROUPS.map((group) => [group, Object.fromEntries(v.levels.map((l) => [String(l.levels), view(v, l, l.groups[group])]))])) as Record<AssetGroup, Record<string, ReportView>>,
-      ]),
-    ),
+    views: mergedViews(variants),
   };
+}
+
+/** Views by multiplier and max open; variants that differ only in their own level share one, levels merged. */
+function mergedViews(variants: readonly SettingResult[]): ReportSetting["views"] {
+  const views: ReportSetting["views"] = {};
+  for (const v of variants) {
+    const key = variantKey(v.setting.martingale.multiplier, v.setting.maxOpenRounds);
+    const groups = (views[key] ??= Object.fromEntries(ASSET_GROUPS.map((g) => [g, {}])) as Record<AssetGroup, Record<string, ReportView>>);
+    for (const group of ASSET_GROUPS) for (const l of v.levels) groups[group][String(l.levels)] ??= view(v, l, l.groups[group]);
+  }
+  return views;
 }
 
 function view(r: SettingResult, l: LevelResult, g: GroupResult): ReportView {
@@ -163,14 +207,16 @@ function view(r: SettingResult, l: LevelResult, g: GroupResult): ReportView {
     summary: {
       roundsPerDay: s.roundsPerDay,
       ...g.days,
-      roundsInGoal: inRoundsGoal(g.days.weekdays.roundsPerDay),
+      // How busy is judged on the signal: how often it fires on a weekday
+      roundsInGoal: inRoundsGoal(g.signals.weekdaysPerHour * 24),
+      signals: g.signals,
       roundsPerHour: s.roundsPerHour,
       quietMinutes: s.quietMinutes,
       roundWinPct: s.roundWinPct,
       firstOrderWinPct: s.firstWinPct,
       endShares: [...Array.from({ length: l.levels + 1 }, (_, i) => ((s.wonAtLevel[i] ?? 0) / finished) * 100), (s.lost / finished) * 100],
       endMoney: roundOutcomes({ ...r.setting.martingale, levels: l.levels }, r.setting.order),
-      weekly: s.weekly,
+      parts: s.parts,
       lostPct: (s.lost / finished) * 100,
       profit: s.profit,
       profitPerDay: s.profitPerDay,
@@ -185,6 +231,7 @@ function view(r: SettingResult, l: LevelResult, g: GroupResult): ReportView {
       hours: s.hours.map((h) => ({ hour: h.hour, rounds: h.rounds, firstWinPct: h.rounds ? (h.firstWon / h.rounds) * 100 : 0, profit: h.profit, status: h.status })),
       check: { heldUp: s.check.heldUp, beforeFirstWinPct: s.check.before.firstWinPct, lastFirstWinPct: s.check.last.firstWinPct, beforePerDay: s.check.before.profitPerDay, lastPerDay: s.check.last.profitPerDay },
     },
+    sessions: Object.fromEntries(g.sessions.map((x) => [sessionLabel(x.rule), x])),
     bestAssets: g.byAsset.slice(0, 5).map((a) => ({ name: a.name, rounds: a.rounds, profit: a.profit })),
     worstAssets: g.byAsset.slice(-5).reverse().map((a) => ({ name: a.name, rounds: a.rounds, profit: a.profit })),
   };

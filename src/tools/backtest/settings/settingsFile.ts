@@ -2,6 +2,7 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { DEFAULT_SIGNAL_SETTINGS, type SignalSettings } from "@/domain/signal";
 import { DEFAULT_MARTINGALE, DEFAULT_ORDER, type MartingaleSettings, type MartingaleType, type OrderSettings } from "@/domain/backtest/martingale";
+import type { SessionRule } from "@/domain/backtest/sessions";
 import { CHOICE_FIELDS, FIELD_BY_PATH, NUMBER_FIELDS, type NumberField } from "./fields";
 
 /** One fully resolved setting to backtest: a file, or one combination of the lists in a file. */
@@ -15,24 +16,33 @@ export interface RunSetting {
   order: OrderSettings;
   /** Bangkok hours a round may start in, or undefined for all day. */
   hours?: boolean[];
+  /** How we trade: each session rule is played on its own. */
+  sessions: SessionRule[];
+  /** Most rounds open at once across all assets; 0 = no limit. */
+  maxOpenRounds: number;
   /** Every value in settings-file form, defaults filled in, e.g. { "bollinger.period": 14, ... }. */
-  values: Record<string, number | string | string[]>;
+  values: Record<string, number | string | boolean | string[]>;
 }
 
 export class SettingsError extends Error {}
 
 const GROUPS = new Set([...NUMBER_FIELDS.map((f) => f.path), ...Object.keys(CHOICE_FIELDS)].map((p) => p.split(".")[0]!));
-const TOP_LEVEL = new Set([...GROUPS, "note", "hours"]);
+const TOP_LEVEL = new Set([...GROUPS, "note", "hours", "sessions"]);
+const SESSION_KEYS = ["minutes", "takeProfitMultiplier", "stopLossRounds"];
 
 /** The values a file uses when it leaves something out: the bot's current settings. */
-export function defaultValues(): Record<string, number | string> {
+export function defaultValues(): Record<string, number | string | boolean> {
   const s = DEFAULT_SIGNAL_SETTINGS;
   return {
+    "supportResistance.use": s.useSupportResistance,
     "supportResistance.period": s.supportResistancePeriod,
     "supportResistance.zone": s.zonePositionThreshold,
+    "donchian.use": s.useDonchian,
     "donchian.period": s.donchianPeriod,
+    "bollinger.use": s.useBollinger,
     "bollinger.period": s.bollingerPeriod,
     "bollinger.stdDev": s.bollingerStdDev,
+    "stochastic.use": s.useStochastic,
     "stochastic.k": s.stochasticKPeriod,
     "stochastic.d": s.stochasticDPeriod,
     "stochastic.smooth": s.stochasticSmoothing,
@@ -49,6 +59,8 @@ export function defaultValues(): Record<string, number | string> {
     "martingale.levels": DEFAULT_MARTINGALE.levels,
     "order.amount": DEFAULT_ORDER.amount,
     "order.payout": DEFAULT_ORDER.payout,
+    // The bot trades every signal today: no limit
+    "trading.maxOpenRounds": 0,
   };
 }
 
@@ -61,13 +73,13 @@ export function parseSettingsFile(file: string, raw: unknown): RunSetting[] {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) throw new SettingsError(`${file}: must be a JSON object`);
   const obj = raw as Record<string, unknown>;
 
-  const choices = new Map<string, (number | string)[]>();
+  const choices = new Map<string, (number | string | boolean)[]>();
   for (const [key, value] of Object.entries(obj)) {
     if (!TOP_LEVEL.has(key)) {
       problems.push(`unknown setting "${key}" (known: ${[...TOP_LEVEL].join(", ")})`);
       continue;
     }
-    if (key === "note" || key === "hours") continue;
+    if (key === "note" || key === "hours" || key === "sessions") continue;
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
       problems.push(`"${key}" must be an object, e.g. { "period": 14 }`);
       continue;
@@ -77,8 +89,8 @@ export function parseSettingsFile(file: string, raw: unknown): RunSetting[] {
       const options = CHOICE_FIELDS[path];
       if (options) {
         const list = Array.isArray(v) ? v : [v];
-        if (list.length === 0 || list.some((t) => !options.includes(t as string))) problems.push(`"${path}" must be ${options.map((o) => `"${o}"`).join(" or ")}`);
-        else choices.set(path, list as string[]);
+        if (list.length === 0 || list.some((t) => !options.includes(t as string | boolean))) problems.push(`"${path}" must be ${options.map((o) => JSON.stringify(o)).join(" or ")}`);
+        else choices.set(path, list as (string | boolean)[]);
         continue;
       }
       const field = FIELD_BY_PATH.get(path);
@@ -104,13 +116,14 @@ export function parseSettingsFile(file: string, raw: unknown): RunSetting[] {
       problems.push(`"hours" ${(error as Error).message}`);
     }
   }
+  const sessions = parseSessions(obj.sessions, problems);
   if (problems.length) throw new SettingsError(`${file}:\n${problems.map((p) => `  - ${p}`).join("\n")}`);
 
   const varied = [...choices].filter(([, values]) => values.length > 1).map(([path]) => path);
   return combinations(choices).map((chosen) => {
-    const values: Record<string, number | string | string[]> = { ...defaultValues(), ...chosen };
+    const values: Record<string, number | string | boolean | string[]> = { ...defaultValues(), ...chosen };
     if (hours) values.hours = hours.text;
-    const setting = toRunSetting(file, values, note as string | undefined, hours?.allowed);
+    const setting = toRunSetting(file, values, note as string | undefined, hours?.allowed, sessions);
     if (varied.length) setting.label = `${file} [${varied.map((p) => `${p}=${chosen[p]}`).join(", ")}]`;
     return setting;
   });
@@ -123,13 +136,56 @@ function checkNumber(field: NumberField, n: unknown): string | undefined {
   return undefined;
 }
 
-function combinations(choices: Map<string, (number | string)[]>): Record<string, number | string>[] {
-  let out: Record<string, number | string>[] = [{}];
+function combinations(choices: Map<string, (number | string | boolean)[]>): Record<string, number | string | boolean>[] {
+  let out: Record<string, number | string | boolean>[] = [{}];
   for (const [path, values] of choices) out = out.flatMap((combo) => values.map((v) => ({ ...combo, [path]: v })));
   return out;
 }
 
-function toRunSetting(file: string, values: Record<string, number | string | string[]>, note: string | undefined, hours: boolean[] | undefined): RunSetting {
+/**
+ * "sessions": the session rules every setting of the file is played with, e.g.
+ * [{ "minutes": 60, "takeProfitMultiplier": 10, "stopLossRounds": 1 }]. Required.
+ */
+function parseSessions(raw: unknown, problems: string[]): SessionRule[] {
+  const example = '[{ "minutes": 60, "takeProfitMultiplier": 10, "stopLossRounds": 1 }]';
+  if (raw === undefined) {
+    problems.push(`"sessions" is missing: list how we trade, e.g. "sessions": ${example}`);
+    return [];
+  }
+  if (!Array.isArray(raw) || raw.length === 0) {
+    problems.push(`"sessions" must be a list of session rules, e.g. ${example}`);
+    return [];
+  }
+  return raw.flatMap((rule, i): SessionRule[] => {
+    const at = `"sessions"[${i}]`;
+    if (typeof rule !== "object" || rule === null || Array.isArray(rule)) {
+      problems.push(`${at} must be an object, e.g. ${example.slice(1, -1)}`);
+      return [];
+    }
+    const r = rule as Record<string, unknown>;
+    const unknown = Object.keys(r).filter((k) => !SESSION_KEYS.includes(k));
+    if (unknown.length) problems.push(`${at} has unknown "${unknown.join('", "')}" (known: ${SESSION_KEYS.join(", ")})`);
+    const check = (key: string, min: number, max: number, whole: boolean, required: boolean): number | undefined => {
+      const v = r[key];
+      if (v === undefined) {
+        if (required) problems.push(`${at} needs "${key}"`);
+        return undefined;
+      }
+      if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max || (whole && !Number.isInteger(v))) {
+        problems.push(`${at}.${key} must be ${whole ? "a whole number" : "a number"} between ${min} and ${max}, got ${JSON.stringify(v)}`);
+        return undefined;
+      }
+      return v;
+    };
+    const minutes = check("minutes", 1, 1440, true, true);
+    const takeProfitMultiplier = check("takeProfitMultiplier", 0.1, 10_000, false, false);
+    const stopLossRounds = check("stopLossRounds", 0.1, 100, false, false);
+    if (minutes === undefined) return [];
+    return [{ minutes, ...(takeProfitMultiplier !== undefined ? { takeProfitMultiplier } : {}), ...(stopLossRounds !== undefined ? { stopLossRounds } : {}) }];
+  });
+}
+
+function toRunSetting(file: string, values: Record<string, number | string | boolean | string[]>, note: string | undefined, hours: boolean[] | undefined, sessions: SessionRule[]): RunSetting {
   const signal: SignalSettings = { ...DEFAULT_SIGNAL_SETTINGS };
   for (const field of NUMBER_FIELDS) {
     for (const key of field.signal ?? []) (signal[key] as number) = values[field.path] as number;
@@ -137,6 +193,10 @@ function toRunSetting(file: string, values: Record<string, number | string | str
   const level = values["stochastic.level"] as number;
   signal.stochasticKOversold = 100 - level;
   signal.stochasticDOversold = 100 - level;
+  signal.useSupportResistance = values["supportResistance.use"] === true;
+  signal.useDonchian = values["donchian.use"] === true;
+  signal.useBollinger = values["bollinger.use"] === true;
+  signal.useStochastic = values["stochastic.use"] === true;
   if (signal.sizeLookback + signal.candlesToCheckSize > signal.windowSize) {
     throw new SettingsError(`${file}: candle.sizeLookback + candle.sizeCandles must be at most ${signal.windowSize}`);
   }
@@ -148,6 +208,8 @@ function toRunSetting(file: string, values: Record<string, number | string | str
     martingale: { type: values["martingale.type"] as MartingaleType, multiplier: values["martingale.multiplier"] as number, levels: values["martingale.levels"] as number },
     order: { amount: values["order.amount"] as number, payout: values["order.payout"] as number },
     ...(hours ? { hours } : {}),
+    sessions,
+    maxOpenRounds: values["trading.maxOpenRounds"] as number,
     values,
   };
 }

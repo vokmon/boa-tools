@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Candle } from "@/domain/signal";
 import { DEFAULT_MARTINGALE, nextStake, worstCaseStake } from "@/domain/backtest/martingale";
-import { LOST, STOPPED, bangkokDay, bangkokHour, priceSeries, simulateRounds } from "@/domain/backtest/rounds";
+import { LOST, STOPPED, bangkokDay, bangkokHour, limitOpenRounds, priceSeries, simulateRounds } from "@/domain/backtest/rounds";
 import { groupSplit, hourRanges, isWeekend, summarize, type HourStat } from "@/domain/backtest/summary";
 
 const T0 = Date.parse("2026-10-20T03:00:00Z") / 1000; // 10:00 Bangkok
@@ -86,6 +86,31 @@ describe("simulateRounds", () => {
   });
 });
 
+describe("cover martingale", () => {
+  test("each level wins back exactly the losses: a round won by martingale ends at 0", () => {
+    const cover = { ...DEFAULT_MARTINGALE, type: "cover" as const };
+    const order = { amount: 30, payout: 85 };
+    expect(nextStake(30, 30, cover, order)).toBe(35.3);
+    expect(nextStake(35.3, 65.3, cover, order)).toBe(76.83);
+    const [round] = simulateRounds(1, priceSeries(candles("xddu")), signalsAt(4, { 0: 1 }), { ...options, order, martingale: cover });
+    expect(round!.wonAt).toBe(2);
+    expect(round!.profit).toBeGreaterThanOrEqual(0);
+    expect(round!.profit).toBeLessThan(0.02);
+  });
+});
+
+describe("limitOpenRounds", () => {
+  const r = (activeId: number, startMin: number, endMin: number) => ({ activeId, direction: 1, start: T0 + startMin * 60, end: T0 + endMin * 60, wonAt: 0, orders: 1, staked: 30, profit: 25.5 });
+
+  test("skips a round while the limit is reached; same minute: lower asset id first", () => {
+    const rounds = [r(2, 0, 2), r(1, 0, 2), r(3, 1, 3), r(4, 2, 4), r(5, 2, 3)];
+    // One at a time: asset 1 at 0:00; 2 and 3 are skipped while it runs; it ends at 0:02, so 4 starts
+    expect(limitOpenRounds(rounds, 1).map((x) => x.activeId)).toEqual([1, 4]);
+    expect(limitOpenRounds(rounds, 2).map((x) => x.activeId)).toEqual([1, 2, 4, 5]);
+    expect(limitOpenRounds(rounds, 0)).toHaveLength(5);
+  });
+});
+
 describe("summarize", () => {
   const day = (d: string, hourUtc = 3) => Date.parse(`${d}T${String(hourUtc).padStart(2, "0")}:00:00Z`) / 1000;
   const round = (start: number, wonAt: number, profit: number) => ({ activeId: 1, direction: 1, start, end: start + 120, wonAt, orders: 1, staked: 10, profit });
@@ -117,8 +142,11 @@ describe("summarize", () => {
       worstDay: { day: "2026-10-20", profit: -101.5 },
       biggestDrop: -101.5, // peak 14.5, then -100, +8.5, -10
       mostAtOnce: 2,
-      // Monday 19 and Tuesday 20 October are one week; the stopped round does not count
-      weekly: [{ week: "2026-10-19", rounds: 4, firstWinPct: 50 }],
+      // Two days make two parts, one day each; the stopped round does not count
+      parts: [
+        { from: "2026-10-19", to: "2026-10-19", roundsPerDay: 2, firstWinPct: 50, ends: [50, 50, 0, 0, 0, 0] },
+        { from: "2026-10-20", to: "2026-10-20", roundsPerDay: 2, firstWinPct: 50, ends: [50, 0, 0, 0, 0, 50] },
+      ],
     });
   });
 
