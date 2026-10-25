@@ -10,7 +10,19 @@ import { mapWithConcurrency } from "@/lib/concurrency";
 import { dayKeyOf, overlaps, type Period } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import { matchesPlanFilter, planTypeOf } from "./planType";
-import { CLOSED_POSITION_FIELDS, CLOSED_POSITION_QUERY, parseClosedPosition, sumByUser, type ClosedPosition, type PnlTotal } from "@/domain/trading";
+import {
+  CLOSED_POSITION_FIELDS,
+  CLOSED_POSITION_QUERY,
+  ORDER_PLACED_FIELDS,
+  ORDER_PLACED_QUERY,
+  orderSearchWindow,
+  parseClosedPosition,
+  parsePlacedOrder,
+  sumByUser,
+  type ClosedPosition,
+  type PlacedOrder,
+  type PnlTotal,
+} from "@/domain/trading";
 import { USAGE_STATUSES, type ReportOptions, type SubscriberUsageRow, type UsageStatus } from "./types";
 
 /** Pick only the service methods used, so tests can pass small fakes. */
@@ -74,6 +86,14 @@ export class SubscriberUsageReport {
       for (const d of r.days) if (d.subscribed) days.add(d.day);
       subscribedDays.set(r.iqOptionId, days);
     }
+    const [positions, orders] = await Promise.all([
+      this.closedPositions(subscribedDays, options),
+      this.placedOrders(new Set(subscribedDays.keys()), options),
+    ]);
+    return sumByUser(positions, orders);
+  }
+
+  private async closedPositions(subscribedDays: Map<string, Set<string>>, options: ReportOptions): Promise<ClosedPosition[]> {
     const positions: ClosedPosition[] = [];
     let scanned = 0;
     let unreadable = 0;
@@ -93,7 +113,26 @@ export class SubscriberUsageReport {
     }
     logger.info(`Sentry: ${scanned} closed positions read, ${positions.length} belong to these subscribers`);
     if (unreadable) logger.warn(`Sentry: ${unreadable} closed-position logs had no readable amount and were skipped`);
-    return sumByUser(positions);
+    return positions;
+  }
+
+  /** Orders placed from the app by these people, to tell bot, manual and outside-the-app positions apart. */
+  private async placedOrders(iqOptionIds: Set<string>, options: ReportOptions): Promise<PlacedOrder[]> {
+    const orders: PlacedOrder[] = [];
+    let scanned = 0;
+    for await (const row of this.deps.logs.iterateLogs({
+      window: orderSearchWindow(options.period.window),
+      projectIds: options.sentryProjectIds,
+      environment: SENTRY_ENVIRONMENT,
+      query: ORDER_PLACED_QUERY,
+      fields: ORDER_PLACED_FIELDS,
+    })) {
+      if (++scanned % 1000 === 0) logger.info(`Sentry: read ${scanned} placed orders...`);
+      const order = parsePlacedOrder(row);
+      if (order && iqOptionIds.has(order.iqOptionId)) orders.push(order);
+    }
+    logger.info(`Sentry: ${scanned} placed orders read, ${orders.length} belong to these subscribers`);
+    return orders;
   }
 
   /** Log counts per local day, keyed by IQ Option id, for every row with a valid id. */

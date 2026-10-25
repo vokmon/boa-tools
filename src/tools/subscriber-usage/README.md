@@ -25,12 +25,22 @@ Only days covered by a matching subscription count: with `--plan trial`, logs fr
 paid plan are ignored.
 
 With `--pnl` (or answering yes), the used section also shows closed trades and net profit/loss
-for the period, e.g. `124 trades   real +1,234.50 THB, demo -20.00 USD`, and the CSV gets
-`pnl_real (THB)` and `pnl_demo (USD)` columns. The header names the most common currency; an
-amount in another currency is written with it, e.g. `12.50 USD`, so currencies are never mixed. Amounts come from the "Position closed (<pnl>) - order (<ids>) - user_iq: <id>"
-logs, de-duplicated by order ids. This reads every closed-position log in the period (about
-1,300 a day, roughly 10 seconds per day), and only covers trades that closed while the app was
-open.
+for the period, split by where each position was placed from, e.g.
+`124 trades   real +1,234.50 THB (system +900.00, manual +400.00, outside -65.50), demo -20.00 USD (system -20.00)`:
+- system: the bot placed it ("Order placed successfully (system)")
+- manual: placed by hand in the app ("Order placed successfully (manual)")
+- outside: the app has no order log for it, i.e. it was placed directly in IQ Option while the
+  app was open
+
+The total is all three added up. The CSV gets `pnl_real (THB)`, `pnl_real_system (THB)`,
+`pnl_real_manual (THB)`, `pnl_real_outside (THB)` and the same four for demo. The header names
+the most common currency; an amount in another currency is written with it, e.g. `12.50 USD`,
+so currencies are never mixed. Amounts come from the "Position closed (<pnl>) - order (<ids>) - user_iq: <id>"
+logs, de-duplicated by order ids (the same close is logged once per open browser tab), and are
+matched by order id to the "Order placed" logs, which are searched from an hour before the
+period so a position opened just before it still finds its order. This reads every
+closed-position and placed-order log in the period (together about 2,000 a day, roughly 20
+seconds per day), and only covers trades that closed while the app was open.
 The CSV in `<DATA_DIR>/reports/` has the same rows and order:
 `status, first_name, last_name, iq_option_id, email, phone, days_used, days_subscribed, used_days, plan, subscription_end`.
 

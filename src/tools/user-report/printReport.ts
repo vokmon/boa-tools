@@ -1,5 +1,5 @@
 import { formatDate, formatDateTime, type Period } from "@/lib/date";
-import { accountText, displayName, subscriptionText } from "./format";
+import { accountText, displayName, sourcesText, subscriptionText } from "./format";
 import type { UserReportRow } from "./types";
 
 const LABEL_WIDTH = 16;
@@ -26,7 +26,10 @@ function block(r: UserReportRow, tz: string): string[] {
   lines.push(line("Activity", `active ${r.activeDays} of ${r.periodDays} days${seen}`));
 
   if (r.accounts.length === 0) lines.push(line("Trading", r.iqOptionId ? "no orders or closed trades in the period" : "unknown without an IQ Option id"));
-  for (const a of r.accounts) lines.push(line(`${capitalize(a.account)} (${a.currency})`, accountText(a)));
+  for (const a of r.accounts) {
+    lines.push(line(`${capitalize(a.account)} (${a.currency})`, accountText(a)));
+    if (a.closed) lines.push(line("", `by source: ${sourcesText(a)}`));
+  }
 
   if (r.validationFailures) {
     const last = r.lastValidationFailure ? `, last ${formatDate(r.lastValidationFailure, tz)}` : "";

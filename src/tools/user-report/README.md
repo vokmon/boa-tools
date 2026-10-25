@@ -15,13 +15,16 @@ last 30 days, which is all Sentry keeps. One block per person in the terminal:
 a@x.com   Somchai Jaidee   IQ 100000001   081-000-0000
   Subscription    Trial (trial), ACTIVE, ends 25/10/2026 (5 days left), 1 other plan
   Activity        active 12 of 30 days, last seen 21/10/2026 13:17
-  Real (THB)      240 orders (200 bot, 40 manual), stake 24,000.00, 236 closed, win rate 51%, P/L +1,250.00, balance 6,100.00
+  Real (THB)      240 orders (200 bot, 40 manual), stake 24,000.00, 256 closed, win rate 51%, P/L +1,250.00, balance 6,100.00
+                  by source: system 198 closed, win rate 52%, P/L +1,400.00; manual 38 closed, win rate 50%, P/L -50.00; outside 20 closed, win rate 45%, P/L -100.00
   Demo (USD)      30 orders (30 bot, 0 manual), stake 3,000.00, 30 closed, win rate 47%, P/L -150.00, balance 9,850.00
+                  by source: system 30 closed, win rate 47%, P/L -150.00
   Blocked         2 attempts without a valid subscription, last 18/10/2026
 ```
 
 The CSV in `<DATA_DIR>/reports/` has one row per email with the same data in columns
-(`real_orders`, `real_pnl`, `demo_balance`, ...).
+(`real_orders`, `real_pnl`, `demo_balance`, ...), plus closed, win rate (percent) and P/L per
+source for each account (`real_system_pnl`, `real_outside_closed`, `demo_manual_win_rate`, ...).
 
 Where each part comes from:
 - Wix: the contact by primary email (name, phone, IQ Option id) and all their pricing-plan
@@ -30,7 +33,12 @@ Where each part comes from:
 - IQ Option id: the Wix field; if it is empty or not a number, the id on the person's
   "Order placed successfully" logs, matched by their IQ Option login email.
 - Orders: "Order placed successfully (system|manual) ..." logs, de-duplicated by order id.
-- Closed trades, win rate, P/L and balance: "Position closed (<pnl>) ..." logs.
+- Closed trades, win rate, P/L and balance: "Position closed (<pnl>) ..." logs, de-duplicated by
+  order ids (the same close is logged once per open browser tab).
+- Source of each closed trade, matched by order id to the order logs: system (the bot), manual
+  (by hand in the app), or outside (no order log: placed directly in IQ Option while the app was
+  open). Order logs are searched from an hour before the period so a position opened just
+  before it still finds its order; those earlier orders are not counted as orders.
 - Active days and last seen: any log with the IQ Option id, plus the app-open log
   ("Received config for user <email>", written by iq-signal).
 - Blocked: "Subscription validation failed" logs for the email.

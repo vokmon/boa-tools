@@ -1,5 +1,5 @@
 import type { AccountSummary } from "@/domain/trading";
-import { formatAmount } from "@/domain/trading";
+import { formatAmount, TRADE_SOURCES } from "@/domain/trading";
 import { formatDate } from "@/lib/date";
 import type { CurrentSubscription, UserReportRow } from "./types";
 
@@ -26,6 +26,16 @@ export function accountText(a: AccountSummary): string {
     `${a.orders} orders (${a.botOrders} bot, ${a.manualOrders} manual), stake ${money(a.stake)}, ` +
     `${a.closed} closed, win rate ${percent(a.winRate)}, P/L ${formatAmount(a.pnl)}${balance}`
   );
+}
+
+/** "system 10 closed, win rate 60%, P/L +900.00; outside 2 closed, ..."; sources without closed positions are left out. */
+export function sourcesText(a: AccountSummary): string {
+  return TRADE_SOURCES.filter((s) => a.bySource[s].trades > 0)
+    .map((s) => {
+      const r = a.bySource[s];
+      return `${s} ${r.trades} closed, win rate ${percent(r.wins / r.trades)}, P/L ${formatAmount(r.pnl)}`;
+    })
+    .join("; ");
 }
 
 export function displayName(r: UserReportRow): string {

@@ -12,6 +12,7 @@ import {
   ORDER_PLACED_FIELDS,
   ORDER_PLACED_QUERY,
   iqOptionIdInMessage,
+  orderSearchWindow,
   parseClosedPosition,
   parsePlacedOrder,
   summarizeAccounts,
@@ -121,8 +122,11 @@ export class UserReport {
   private async sentryActivity(iqOptionId: string, email: string, options: UserReportOptions) {
     const scope = this.searchScope(options);
     const [orders, positions, idBuckets, openBuckets, latestById, latestOpen] = await Promise.all([
-      this.collect(`${ORDER_PLACED_QUERY} message:*${iqOptionId}*`, ORDER_PLACED_FIELDS, parsePlacedOrder, options),
-      this.collect(`${CLOSED_POSITION_QUERY} message:*${iqOptionId}*`, CLOSED_POSITION_FIELDS, parseClosedPosition, options),
+      this.collect(`${ORDER_PLACED_QUERY} message:*${iqOptionId}*`, ORDER_PLACED_FIELDS, parsePlacedOrder, {
+        ...scope,
+        window: orderSearchWindow(scope.window),
+      }),
+      this.collect(`${CLOSED_POSITION_QUERY} message:*${iqOptionId}*`, CLOSED_POSITION_FIELDS, parseClosedPosition, scope),
       this.deps.usage.countMessagesContaining(iqOptionId, { ...scope, datasets: SENTRY_DATASETS }),
       this.deps.usage.countMessagesContaining(appOpenedText(email), { ...scope, datasets: ["logs"] }),
       this.deps.logs.findLatest({ ...scope, query: `message:*${iqOptionId}*`, fields: ["message"] }),
@@ -130,12 +134,15 @@ export class UserReport {
     ]);
     const tz = options.period.timeZone;
     const activeDays = new Set([...idBuckets, ...openBuckets].map((b) => dayKeyOf(b.start, tz)));
+    // Orders from just before the period only tell where a position came from; they are not counted.
+    const knownOrders = orders.filter((o) => o.iqOptionId === iqOptionId);
     return {
       activeDays: activeDays.size,
       lastSeen: latestOf(latestById?.timestamp, latestOpen?.timestamp),
       accounts: summarizeAccounts(
-        orders.filter((o) => o.iqOptionId === iqOptionId),
+        knownOrders.filter((o) => o.placedAt >= scope.window.start),
         positions.filter((p) => p.iqOptionId === iqOptionId),
+        knownOrders,
       ),
     };
   }
@@ -172,10 +179,10 @@ export class UserReport {
     query: string,
     fields: readonly string[],
     parse: (row: Record<string, unknown>) => T | null,
-    options: UserReportOptions,
+    scope: ReturnType<UserReport["searchScope"]>,
   ): Promise<T[]> {
     const out: T[] = [];
-    for await (const row of this.deps.logs.iterateLogs({ ...this.searchScope(options), query, fields })) {
+    for await (const row of this.deps.logs.iterateLogs({ ...scope, query, fields })) {
       const parsed = parse(row);
       if (parsed) out.push(parsed);
     }

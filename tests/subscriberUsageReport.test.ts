@@ -3,7 +3,7 @@ import { SubscriberUsageReport, type ReportDependencies } from "@/tools/subscrib
 import { csvColumns } from "@/tools/subscriber-usage/csvColumns";
 import type { WixContact, WixOrder } from "@/clients/wix/types";
 import type { TimeBucket } from "@/clients/sentry/MessageTimeseriesService";
-import type { LogRow } from "@/clients/sentry/LogSearchService";
+import type { LogRow, LogSearchOptions } from "@/clients/sentry/LogSearchService";
 import type { PlanFilter, SubscriberUsageRow, SubscriptionMatch } from "@/tools/subscriber-usage/types";
 import { buildPeriod } from "@/lib/date";
 import { toCsv } from "@/lib/csv/CsvWriter";
@@ -57,6 +57,7 @@ const buckets: Record<string, TimeBucket[]> = {
 
 // Closed positions for 111: two real trades on 18/10 (one logged twice), one demo trade on 20/10,
 // and one on 21/10 which is outside the period window the fake ignores (the real API filters it).
+// Order 1 was placed by the bot, order 3 by hand just before the period, order 4 outside the app.
 const closedLogs: LogRow[] = [
   { message: "Position closed (85.00) - order (1) - user_iq: 111", balance: '{"type":"real","currency":"THB"}', timestamp: "2026-10-18T03:00:00+00:00" },
   { message: "Position closed (85.00) - order (1) - user_iq: 111", balance: '{"type":"real","currency":"THB"}', timestamp: "2026-10-18T03:00:01+00:00" },
@@ -64,8 +65,15 @@ const closedLogs: LogRow[] = [
   { message: "Position closed (1.73) - order (4) - user_iq: 111", balance: '{"type":"demo","currency":"USD"}', timestamp: "2026-10-19T18:00:00+00:00" },
   { message: "Position closed (50.00) - order (5) - user_iq: 999", balance: '{"type":"real","currency":"THB"}', timestamp: "2026-10-18T03:00:00+00:00" },
 ];
+const orderLogs: LogRow[] = [
+  { message: "Order placed successfully (system) (1) 1/A - Amount: 100.00 - user_iq: 111", order: '{"balanceType":"real","balanceCurrency":"THB"}', timestamp: "2026-10-18T02:59:00+00:00" },
+  { message: "Order placed successfully (manual) (3) 1/A - Amount: 100.00 - user_iq: 111", order: '{"balanceType":"real","balanceCurrency":"THB"}', timestamp: "2026-10-17T16:30:00+00:00" },
+  { message: "Order placed successfully (system) (5) 1/A - Amount: 50.00 - user_iq: 999", order: '{"balanceType":"real","balanceCurrency":"THB"}', timestamp: "2026-10-18T02:59:00+00:00" },
+];
+const result = (trades: number, wins: number, losses: number, pnl: number) => ({ trades, wins, losses, pnl });
+const none = result(0, 0, 0, 0);
 
-function deps(searched: string[] = []): ReportDependencies {
+function deps(searched: string[] = [], logSearches: LogSearchOptions[] = []): ReportDependencies {
   return {
     orders: { listOrders: async () => orders },
     contacts: {
@@ -79,8 +87,9 @@ function deps(searched: string[] = []): ReportDependencies {
       },
     },
     logs: {
-      iterateLogs: async function* () {
-        yield* closedLogs;
+      iterateLogs: async function* (o: LogSearchOptions) {
+        logSearches.push(o);
+        yield* o.query.includes("Order placed") ? orderLogs : closedLogs;
       },
     },
   };
@@ -129,14 +138,22 @@ describe("SubscriberUsageReport", () => {
     expect(ids).toEqual(["bad", "gone", "noid", "used"]);
   });
 
-  test("profit/loss: de-duplicated, real and demo kept apart, only for subscribed people", async () => {
+  test("profit/loss: de-duplicated, real and demo kept apart, split by source, only for subscribed people", async () => {
     const rows = byId(await run("all", undefined, "active", true));
     expect(rows.used!.pnl).toEqual([
-      { account: "real", currency: "THB", trades: 2, wins: 1, losses: 1, pnl: -15 },
-      { account: "demo", currency: "USD", trades: 1, wins: 1, losses: 0, pnl: 1.73 },
+      { account: "real", currency: "THB", ...result(2, 1, 1, -15), bySource: { system: result(1, 1, 0, 85), manual: result(1, 0, 1, -100), outside: none } },
+      { account: "demo", currency: "USD", ...result(1, 1, 0, 1.73), bySource: { system: none, manual: none, outside: result(1, 1, 0, 1.73) } },
     ]);
     expect(rows.idle!.pnl).toEqual([]);
     expect(rows.noid!.pnl).toBeNull();
+  });
+
+  test("order logs are searched from an hour before the period", async () => {
+    const searches: LogSearchOptions[] = [];
+    await new SubscriberUsageReport(deps([], searches)).build({ period, planFilter: "all", match: "active", includePnl: true, sentryProjectIds: ["1"] });
+    const orderSearch = searches.find((s) => s.query.includes("Order placed"))!;
+    expect(orderSearch.window.start).toEqual(new Date("2026-10-17T16:00:00Z"));
+    expect(orderSearch.window.end).toEqual(period.window.end);
   });
 
   test("profit/loss is not computed unless requested", async () => {
@@ -148,7 +165,9 @@ describe("SubscriberUsageReport", () => {
     const rows = byId(await run("paid", undefined, "active", true));
     expect(rows.used!.days.map((d) => d.logCount)).toEqual([0, 0, 5]);
     expect(rows.used!.daysUsed).toBe(1);
-    expect(rows.used!.pnl).toEqual([{ account: "demo", currency: "USD", trades: 1, wins: 1, losses: 0, pnl: 1.73 }]);
+    expect(rows.used!.pnl).toEqual([
+      { account: "demo", currency: "USD", ...result(1, 1, 0, 1.73), bySource: { system: none, manual: none, outside: result(1, 1, 0, 1.73) } },
+    ]);
   });
 
   test("reads the phone number", async () => {
@@ -207,24 +226,30 @@ describe("formatReport", () => {
 });
 
 describe("profit/loss output", () => {
-  test("terminal shows trades and totals; CSV gets one pnl column per account", async () => {
+  test("terminal shows trades, totals and sources; CSV gets a total and one column per source for each account", async () => {
     const rows = await run("all", undefined, "active", true);
     const text = formatReport(rows, { period, planFilter: "all", includePnl: true });
-    expect(text).toMatch(/3 trades\s+real -15\.00 THB, demo \+1\.73 USD/);
+    expect(text).toMatch(/3 trades\s+real -15\.00 THB \(system \+85\.00, manual -100\.00\), demo \+1\.73 USD \(outside \+1\.73\)/);
     const lines = toCsv(rows, csvColumns(period, rows)).trim().split("\r\n");
-    expect(lines[0]).toContain(",used_days,pnl_real (THB),pnl_demo (USD),plan,");
-    expect(lines.find((l) => l.startsWith("USED,"))).toContain('"18/10, 20/10",-15,1.73,');
-    expect(lines.find((l) => l.startsWith("NEVER_USED,"))).toContain(",0,0,Bot 1 Month,");
-    expect(lines.find((l) => l.startsWith("NO_IQ_OPTION_ID,"))).toContain(",,,Trial,");
+    expect(lines[0]).toContain(
+      ",used_days,pnl_real (THB),pnl_real_system (THB),pnl_real_manual (THB),pnl_real_outside (THB)," +
+        "pnl_demo (USD),pnl_demo_system (USD),pnl_demo_manual (USD),pnl_demo_outside (USD),plan,",
+    );
+    expect(lines.find((l) => l.startsWith("USED,"))).toContain('"18/10, 20/10",-15,85,-100,0,1.73,0,0,1.73,');
+    expect(lines.find((l) => l.startsWith("NEVER_USED,"))).toContain(",0,0,0,0,0,0,0,0,Bot 1 Month,");
+    expect(lines.find((l) => l.startsWith("NO_IQ_OPTION_ID,"))).toContain(",,,,,,,,,Trial,");
   });
 
   test("an amount in a different currency keeps its currency", () => {
-    const row = { status: "USED", pnl: [{ account: "real", currency: "USD", trades: 1, wins: 1, losses: 0, pnl: 2.5 }] } as SubscriberUsageRow;
-    const other = { status: "USED", pnl: [{ account: "real", currency: "THB", trades: 1, wins: 1, losses: 0, pnl: 9 }] } as SubscriberUsageRow;
+    const bySource = (pnl: number) => ({ system: result(1, 1, 0, pnl), manual: none, outside: none });
+    const row = { status: "USED", pnl: [{ account: "real", currency: "USD", ...result(1, 1, 0, 2.5), bySource: bySource(2.5) }] } as SubscriberUsageRow;
+    const other = { status: "USED", pnl: [{ account: "real", currency: "THB", ...result(1, 1, 0, 9), bySource: bySource(9) }] } as SubscriberUsageRow;
     const third = { ...other };
     const column = csvColumns(period, [row, other, third]).find((c) => c.header.startsWith("pnl_real"))!;
     expect(column.header).toBe("pnl_real (THB)");
     expect(column.value(row)).toBe("2.5 USD");
     expect(column.value(other)).toBe(9);
+    const system = csvColumns(period, [row, other, third]).find((c) => c.header.startsWith("pnl_real_system"))!;
+    expect(system.value(row)).toBe("2.5 USD");
   });
 });

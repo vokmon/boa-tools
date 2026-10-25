@@ -80,10 +80,19 @@ describe("UserReport", () => {
       return [{ message: "Order placed successfully (system) (9) A - Amount: 1.00 - user_iq: 222", timestamp: ts }];
     }
     if (query.includes("Order placed successfully") && query.includes("111")) {
-      return [{ message: "Order placed successfully (system) (1) A - Amount: 100.00 - user_iq: 111", order: '{"balanceType":"real","balanceCurrency":"THB"}', timestamp: ts }];
+      return [
+        { message: "Order placed successfully (system) (1) A - Amount: 100.00 - user_iq: 111", order: '{"balanceType":"real","balanceCurrency":"THB"}', timestamp: ts },
+        // Placed by hand just before the period: tells where position 2 came from, but is not counted.
+        { message: "Order placed successfully (manual) (2) A - Amount: 100.00 - user_iq: 111", order: '{"balanceType":"real","balanceCurrency":"THB"}', timestamp: "2026-10-17T16:30:00+00:00" },
+      ];
     }
     if (query.includes("Position closed") && query.includes("111")) {
-      return [{ message: "Position closed (85.00) - order (1) - user_iq: 111", balance: '{"type":"real","currency":"THB","amount":1085}', timestamp: ts }];
+      // Order 3 has no order log: placed directly in IQ Option.
+      return [
+        { message: "Position closed (85.00) - order (1) - user_iq: 111", balance: '{"type":"real","currency":"THB","amount":1085}', timestamp: ts },
+        { message: "Position closed (-100.00) - order (2) - user_iq: 111", balance: '{"type":"real","currency":"THB","amount":985}', timestamp: "2026-10-18T03:00:00+00:00" },
+        { message: "Position closed (50.00) - order (3) - user_iq: 111", balance: '{"type":"real","currency":"THB","amount":935}', timestamp: "2026-10-18T02:00:00+00:00" },
+      ];
     }
     if (query.includes("validation") && query.includes("active@x.test")) return [{ timestamp: ts }, { timestamp: "2026-10-18T03:00:00+00:00" }];
     if (query === "message:*111*") return [{ message: "x - user_iq: 111", timestamp: ts }];
@@ -129,7 +138,14 @@ describe("UserReport", () => {
     });
     expect(active!.subscription).toMatchObject({ state: "ACTIVE", daysLeft: 5 });
     expect(active!.accounts).toEqual([
-      { account: "real", currency: "THB", orders: 1, botOrders: 1, manualOrders: 0, stake: 100, closed: 1, wins: 1, losses: 0, winRate: 1, pnl: 85, latestBalance: 1085 },
+      {
+        account: "real", currency: "THB", orders: 1, botOrders: 1, manualOrders: 0, stake: 100, closed: 3, wins: 2, losses: 1, winRate: 2 / 3, pnl: 35, latestBalance: 1085,
+        bySource: {
+          system: { trades: 1, wins: 1, losses: 0, pnl: 85 },
+          manual: { trades: 1, wins: 0, losses: 1, pnl: -100 },
+          outside: { trades: 1, wins: 1, losses: 0, pnl: 50 },
+        },
+      },
     ]);
   });
 
@@ -148,7 +164,10 @@ describe("UserReport", () => {
     const text = formatUserReport(rows, period);
     expect(text).toContain("active@x.test   Fa La   IQ 111   08-a");
     expect(text).toMatch(/Subscription\s+Trial \(trial\), ACTIVE, ends 25\/10\/2026 \(5 days left\)/);
-    expect(text).toMatch(/Real \(THB\)\s+1 orders \(1 bot, 0 manual\), stake 100\.00, 1 closed, win rate 100%, P\/L \+85\.00, balance 1,085\.00/);
+    expect(text).toMatch(/Real \(THB\)\s+1 orders \(1 bot, 0 manual\), stake 100\.00, 3 closed, win rate 67%, P\/L \+35\.00, balance 1,085\.00/);
+    expect(text).toMatch(
+      /\s+by source: system 1 closed, win rate 100%, P\/L \+85\.00; manual 1 closed, win rate 0%, P\/L -100\.00; outside 1 closed, win rate 100%, P\/L \+50\.00/,
+    );
     expect(text).toMatch(/Blocked\s+2 attempts without a valid subscription, last 19\/10\/2026/);
     expect(text).toContain("IQ 222 (found in Sentry logs)");
     expect(text).toMatch(/Wix\s+no contact with this email/);
@@ -157,10 +176,14 @@ describe("UserReport", () => {
     expect(lines[0]).toBe(
       "email,first_name,last_name,phone,iq_option_id,plan,plan_type,subscription_status,subscription_end,last_seen," +
         "real_currency,real_orders,real_bot_orders,real_manual_orders,real_pnl,real_balance," +
+        "real_system_closed,real_system_win_rate,real_system_pnl,real_manual_closed,real_manual_win_rate,real_manual_pnl," +
+        "real_outside_closed,real_outside_win_rate,real_outside_pnl," +
         "demo_currency,demo_orders,demo_bot_orders,demo_manual_orders,demo_pnl,demo_balance," +
+        "demo_system_closed,demo_system_win_rate,demo_system_pnl,demo_manual_closed,demo_manual_win_rate,demo_manual_pnl," +
+        "demo_outside_closed,demo_outside_win_rate,demo_outside_pnl," +
         "validation_failures,last_validation_failure",
     );
-    expect(lines[1]).toContain(",THB,1,1,0,85,1085,,0,0,0,0,,2,");
+    expect(lines[1]).toContain(",THB,1,1,0,35,1085,1,100,85,1,0,-100,1,100,50,,0,0,0,0,,0,0,0,0,0,0,0,0,0,2,");
     expect(lines[3]).toStartWith("ghost@x.test,,,,,,,NOT_IN_WIX,");
   });
 });

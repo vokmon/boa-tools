@@ -40,7 +40,10 @@ export interface ReportOptions {
   planFilter: PlanFilter;
   match: SubscriptionMatch;
   sentryProjectIds: string[];
-  /** Sum profit/loss from "Position closed" logs. Slower: downloads every closed-position log in the period. */
+  /**
+   * Sum profit/loss from "Position closed" logs, split by bot, manual and outside the app using the
+   * "Order placed" logs. Slower: downloads every closed-position and placed-order log in the period.
+   */
   includePnl: boolean;
 }
 
