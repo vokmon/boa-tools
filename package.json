@@ -5,6 +5,7 @@
   "scripts": {
     "subscriber-usage": "bun src/tools/subscriber-usage/index.ts",
     "user-report": "bun src/tools/user-report/index.ts",
+    "follow-up-logins": "bun src/tools/follow-up-logins/index.ts",
     "collect-candles": "bun src/tools/collect-candles/index.ts",
     "backtest": "bun src/tools/backtest/index.ts",
     "typecheck": "tsc --noEmit",

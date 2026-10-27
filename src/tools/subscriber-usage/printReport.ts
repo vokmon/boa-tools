@@ -2,7 +2,7 @@ import { formatDate, type Period } from "@/lib/date";
 import { renderTable, type TableColumn } from "@/lib/output/table";
 import { CANNOT_CHECK_STATUSES, STATUS_REASONS, type PlanFilter, type SubscriberUsageRow, type SubscriptionMatch } from "./types";
 import { usedDaysText } from "./usedDays";
-import { formatPnl } from "@/domain/trading";
+import { pnlTableColumns } from "@/tools/shared/pnlOutput";
 
 export interface FormatReportOptions {
   period: Period;
@@ -42,16 +42,11 @@ export function formatReport(rows: SubscriberUsageRow[], options: FormatReportOp
       ...person,
       { value: (r) => `${r.daysUsed}/${r.daysSubscribed} days`, align: "right" },
       { value: usedDaysText },
-      ...(includePnl ? pnlColumns : []),
+      ...(includePnl ? pnlTableColumns((r: SubscriberUsageRow) => r.pnl) : []),
     ]),
   ];
   return lines.join("\n");
 }
-
-const pnlColumns: TableColumn<SubscriberUsageRow>[] = [
-  { value: (r) => `${(r.pnl ?? []).reduce((n, t) => n + t.trades, 0)} trades`, align: "right" },
-  { value: (r) => (r.pnl?.length ? formatPnl(r.pnl) : "no closed trades") },
-];
 
 function section(title: string, rows: SubscriberUsageRow[], columns: TableColumn<SubscriberUsageRow>[]): string[] {
   if (rows.length === 0) return [];

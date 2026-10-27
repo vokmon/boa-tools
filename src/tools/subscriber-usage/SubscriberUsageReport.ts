@@ -10,19 +10,8 @@ import { mapWithConcurrency } from "@/lib/concurrency";
 import { dayKeyOf, overlaps, type Period } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import { matchesPlanFilter, planTypeOf } from "./planType";
-import {
-  CLOSED_POSITION_FIELDS,
-  CLOSED_POSITION_QUERY,
-  ORDER_PLACED_FIELDS,
-  ORDER_PLACED_QUERY,
-  orderSearchWindow,
-  parseClosedPosition,
-  parsePlacedOrder,
-  sumByUser,
-  type ClosedPosition,
-  type PlacedOrder,
-  type PnlTotal,
-} from "@/domain/trading";
+import { sumByUser, type PnlTotal } from "@/domain/trading";
+import { readClosedPositions, readPlacedOrders } from "@/tools/shared/tradeLogs";
 import { USAGE_STATUSES, type ReportOptions, type SubscriberUsageRow, type UsageStatus } from "./types";
 
 /** Pick only the service methods used, so tests can pass small fakes. */
@@ -86,53 +75,12 @@ export class SubscriberUsageReport {
       for (const d of r.days) if (d.subscribed) days.add(d.day);
       subscribedDays.set(r.iqOptionId, days);
     }
-    const [positions, orders] = await Promise.all([
-      this.closedPositions(subscribedDays, options),
-      this.placedOrders(new Set(subscribedDays.keys()), options),
-    ]);
+    const scope = { window: options.period.window, projectIds: options.sentryProjectIds };
+    const [allPositions, allOrders] = await Promise.all([readClosedPositions(this.deps.logs, scope), readPlacedOrders(this.deps.logs, scope)]);
+    const positions = allPositions.filter((p) => subscribedDays.get(p.iqOptionId)?.has(dayKeyOf(p.closedAt, options.period.timeZone)));
+    const orders = allOrders.filter((o) => subscribedDays.has(o.iqOptionId));
+    logger.info(`Sentry: ${allPositions.length} closed positions and ${allOrders.length} placed orders read, ${positions.length} and ${orders.length} belong to these subscribers`);
     return sumByUser(positions, orders);
-  }
-
-  private async closedPositions(subscribedDays: Map<string, Set<string>>, options: ReportOptions): Promise<ClosedPosition[]> {
-    const positions: ClosedPosition[] = [];
-    let scanned = 0;
-    let unreadable = 0;
-    for await (const row of this.deps.logs.iterateLogs({
-      window: options.period.window,
-      projectIds: options.sentryProjectIds,
-      environment: SENTRY_ENVIRONMENT,
-      query: CLOSED_POSITION_QUERY,
-      fields: CLOSED_POSITION_FIELDS,
-    })) {
-      if (++scanned % 1000 === 0) logger.info(`Sentry: read ${scanned} closed positions...`);
-      const position = parseClosedPosition(row);
-      if (!position) unreadable++;
-      else if (subscribedDays.get(position.iqOptionId)?.has(dayKeyOf(position.closedAt, options.period.timeZone))) {
-        positions.push(position);
-      }
-    }
-    logger.info(`Sentry: ${scanned} closed positions read, ${positions.length} belong to these subscribers`);
-    if (unreadable) logger.warn(`Sentry: ${unreadable} closed-position logs had no readable amount and were skipped`);
-    return positions;
-  }
-
-  /** Orders placed from the app by these people, to tell bot, manual and outside-the-app positions apart. */
-  private async placedOrders(iqOptionIds: Set<string>, options: ReportOptions): Promise<PlacedOrder[]> {
-    const orders: PlacedOrder[] = [];
-    let scanned = 0;
-    for await (const row of this.deps.logs.iterateLogs({
-      window: orderSearchWindow(options.period.window),
-      projectIds: options.sentryProjectIds,
-      environment: SENTRY_ENVIRONMENT,
-      query: ORDER_PLACED_QUERY,
-      fields: ORDER_PLACED_FIELDS,
-    })) {
-      if (++scanned % 1000 === 0) logger.info(`Sentry: read ${scanned} placed orders...`);
-      const order = parsePlacedOrder(row);
-      if (order && iqOptionIds.has(order.iqOptionId)) orders.push(order);
-    }
-    logger.info(`Sentry: ${scanned} placed orders read, ${orders.length} belong to these subscribers`);
-    return orders;
   }
 
   /** Log counts per local day, keyed by IQ Option id, for every row with a valid id. */

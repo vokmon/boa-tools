@@ -6,24 +6,13 @@ import type { LogSearchService } from "@/clients/sentry/LogSearchService";
 import type { MessageTimeseriesService } from "@/clients/sentry/MessageTimeseriesService";
 import { appOpenedText, validationFailedFor } from "@/domain/appLogs";
 import { iqOptionIdOf, isValidIqOptionId, toSubscriptionOrder, type SubscriptionOrder } from "@/domain/subscriptions";
-import {
-  CLOSED_POSITION_FIELDS,
-  CLOSED_POSITION_QUERY,
-  ORDER_PLACED_FIELDS,
-  ORDER_PLACED_QUERY,
-  iqOptionIdInMessage,
-  orderSearchWindow,
-  parseClosedPosition,
-  parsePlacedOrder,
-  summarizeAccounts,
-  type ClosedPosition,
-  type PlacedOrder,
-} from "@/domain/trading";
+import { ORDER_PLACED_QUERY, iqOptionIdInMessage, summarizeAccounts } from "@/domain/trading";
+import { readClosedPositions, readPlacedOrders } from "@/tools/shared/tradeLogs";
 import { groupBy } from "@/lib/collections";
 import { mapWithConcurrency } from "@/lib/concurrency";
 import { dayKeyOf, type Period } from "@/lib/date";
 import { logger } from "@/lib/logger";
-import { currentSubscription } from "./currentSubscription";
+import { currentSubscription } from "@/domain/currentSubscription";
 import type { IqOptionIdSource, UserReportRow, WixMatch } from "./types";
 
 /** People looked up at the same time; each makes several Sentry requests. */
@@ -122,11 +111,8 @@ export class UserReport {
   private async sentryActivity(iqOptionId: string, email: string, options: UserReportOptions) {
     const scope = this.searchScope(options);
     const [orders, positions, idBuckets, openBuckets, latestById, latestOpen] = await Promise.all([
-      this.collect(`${ORDER_PLACED_QUERY} message:*${iqOptionId}*`, ORDER_PLACED_FIELDS, parsePlacedOrder, {
-        ...scope,
-        window: orderSearchWindow(scope.window),
-      }),
-      this.collect(`${CLOSED_POSITION_QUERY} message:*${iqOptionId}*`, CLOSED_POSITION_FIELDS, parseClosedPosition, scope),
+      readPlacedOrders(this.deps.logs, { ...scope, iqOptionId }),
+      readClosedPositions(this.deps.logs, { ...scope, iqOptionId }),
       this.deps.usage.countMessagesContaining(iqOptionId, { ...scope, datasets: SENTRY_DATASETS }),
       this.deps.usage.countMessagesContaining(appOpenedText(email), { ...scope, datasets: ["logs"] }),
       this.deps.logs.findLatest({ ...scope, query: `message:*${iqOptionId}*`, fields: ["message"] }),
@@ -134,15 +120,14 @@ export class UserReport {
     ]);
     const tz = options.period.timeZone;
     const activeDays = new Set([...idBuckets, ...openBuckets].map((b) => dayKeyOf(b.start, tz)));
-    // Orders from just before the period only tell where a position came from; they are not counted.
-    const knownOrders = orders.filter((o) => o.iqOptionId === iqOptionId);
     return {
       activeDays: activeDays.size,
       lastSeen: latestOf(latestById?.timestamp, latestOpen?.timestamp),
+      // Orders from just before the period only tell where a position came from; they are not counted.
       accounts: summarizeAccounts(
-        knownOrders.filter((o) => o.placedAt >= scope.window.start),
-        positions.filter((p) => p.iqOptionId === iqOptionId),
-        knownOrders,
+        orders.filter((o) => o.placedAt >= scope.window.start),
+        positions,
+        orders,
       ),
     };
   }
@@ -173,20 +158,6 @@ export class UserReport {
       last ??= latestOf(row.timestamp);
     }
     return { count, last };
-  }
-
-  private async collect<T extends PlacedOrder | ClosedPosition>(
-    query: string,
-    fields: readonly string[],
-    parse: (row: Record<string, unknown>) => T | null,
-    scope: ReturnType<UserReport["searchScope"]>,
-  ): Promise<T[]> {
-    const out: T[] = [];
-    for await (const row of this.deps.logs.iterateLogs({ ...scope, query, fields })) {
-      const parsed = parse(row);
-      if (parsed) out.push(parsed);
-    }
-    return out;
   }
 
   private searchScope(options: UserReportOptions) {

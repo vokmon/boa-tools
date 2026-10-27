@@ -1,6 +1,18 @@
-import type { SubscriptionOrder } from "@/domain/subscriptions";
-import { planTypeOf } from "@/domain/subscriptions";
-import type { CurrentSubscription, SubscriptionState } from "./types";
+import { planTypeOf, type PlanType, type SubscriptionOrder } from "./subscriptions";
+
+export type SubscriptionState = "ACTIVE" | "UPCOMING" | "PAUSED" | "ENDED" | "CANCELED" | "NONE";
+
+export interface CurrentSubscription {
+  plan: string;
+  planType: PlanType;
+  state: SubscriptionState;
+  start: Date;
+  end: Date | null;
+  /** Whole days until the end, for an active subscription. */
+  daysLeft: number | null;
+  /** How many other plans this person has had. */
+  otherPlans: number;
+}
 
 const DAY_MS = 86_400_000;
 
@@ -46,4 +58,12 @@ export function currentSubscription(orders: SubscriptionOrder[], now = new Date(
     daysLeft: state === "ACTIVE" && o.end ? Math.max(0, Math.ceil((o.end.getTime() - now.getTime()) / DAY_MS)) : null,
     otherPlans: orders.length - 1,
   };
+}
+
+/**
+ * Whether the person can use the app now or soon without buying anything: an ACTIVE order that
+ * has not ended, or a PENDING one (paid, starts later). DRAFT orders are unpaid, so they do not count.
+ */
+export function hasValidSubscription(orders: SubscriptionOrder[], now = new Date()): boolean {
+  return orders.some((o) => (o.order.status === "ACTIVE" && !(o.end && o.end < now)) || o.order.status === "PENDING");
 }

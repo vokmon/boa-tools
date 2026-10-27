@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { UserReport, type UserReportDependencies } from "@/tools/user-report/UserReport";
-import { currentSubscription } from "@/tools/user-report/currentSubscription";
+import { currentSubscription } from "@/domain/currentSubscription";
 import { extractEmails, parseEmailList } from "@/tools/user-report/emails";
 import { csvColumns } from "@/tools/user-report/csvColumns";
 import { formatUserReport } from "@/tools/user-report/printReport";
