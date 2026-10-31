@@ -15,6 +15,7 @@ bun test
 | `bun run subscriber-usage` | every Wix subscriber in a period and the days they used the app | [README](src/tools/subscriber-usage/README.md) |
 | `bun run user-report` | subscription and trading performance for people, by email | [README](src/tools/user-report/README.md) |
 | `bun run follow-up-logins` | people who tried to sign in without a valid subscription and still have none | [README](src/tools/follow-up-logins/README.md) |
+| `bun run member-report` | every Wix member: last login, last training, plan, optional trade P/L | [README](src/tools/member-report/README.md) |
 | `bun run collect-candles` | 1-minute candles of every IQ Option asset into Turso (also runs daily on Supabase) | [README](src/tools/collect-candles/README.md) |
 | `bun run backtest` | replays the bot on the collected candles with settings files; report, AI brief | [README](src/tools/backtest/README.md) |
 

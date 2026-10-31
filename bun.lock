@@ -10,6 +10,8 @@
         "@quadcode-tech/client-sdk-js": "1.3.26",
         "@sentry/api": "^0.368.0",
         "@wix/crm": "^1.0.1662",
+        "@wix/members": "^1.0.541",
+        "@wix/online-programs": "^1.0.232",
         "@wix/pricing-plans": "^1.0.423",
         "@wix/sdk": "^1.21.18",
         "zod": "^4.6.7",
@@ -359,6 +361,66 @@
 
     "@wix/auto_sdk_identity_verification": ["@wix/auto_sdk_identity_verification@1.0.55", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.24", "@wix/sdk-types": "^1.17.11" } }, "sha512-b0HCWX82xiDCvXIz0FMWUjFyA8RpsOqvFc3eyGVshMhZBvxK6nQomlEfJe3Boo/eC9ZO8h7KmmbmHGP61/zs+A=="],
 
+    "@wix/auto_sdk_members_authentication": ["@wix/auto_sdk_members_authentication@1.0.60", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-XUI/c7BpG3lwOH0ls8wBWkFr1o1fKLfBZ2ozkg1aQmSGxTQdtKgwWWugdGFFIAgEPpOjUI9jSG61Sb1vAjOpvg=="],
+
+    "@wix/auto_sdk_members_authorization": ["@wix/auto_sdk_members_authorization@1.0.40", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-bvVOerGlxskfBX/bKFw4ACijDcu56LREKo2zYO4cBOlx6oCoOQmH5aE8Id6541e6jhekyj6nlXv5wVd7vApiTg=="],
+
+    "@wix/auto_sdk_members_badge-assignments": ["@wix/auto_sdk_members_badge-assignments@1.0.35", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-f/UwRyj0Hmf+te5zgBIspem9zA5bNIY9CW5SF1D3CDAhSoy5l6YLLaqfleJ3iDb6lcls+sSDeV7On9dl1Q37dw=="],
+
+    "@wix/auto_sdk_members_badges": ["@wix/auto_sdk_members_badges@1.0.57", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-57tIgvBf8VYih31kyNalJ8gG7u0agUHyRnG4g5i+SiWD7G/3yA1HvQ2RErC914ANhWdxvQ1bGFjboMxNY6zHVA=="],
+
+    "@wix/auto_sdk_members_badges-v-2": ["@wix/auto_sdk_members_badges-v-2@1.0.42", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-ls8ZMmEUZ77utfwRX7NBrtIvATZtzQkqVuIOxrXry2jLODzORtA+cc21gUaJczlIOZbv+ozrlnzKL6GoRWF1Xw=="],
+
+    "@wix/auto_sdk_members_custom-field-applications": ["@wix/auto_sdk_members_custom-field-applications@1.0.46", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-5U0tHX5JY1gtE6oY9Y2x6lR7l5adeTbc5+mO//Rr4Vf+iWzl0l5nQxbC6QNzz+zeF2vUpnbST/YLx+JBHouj+w=="],
+
+    "@wix/auto_sdk_members_custom-field-suggestions": ["@wix/auto_sdk_members_custom-field-suggestions@1.0.45", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-806UWs5UwcumTE8CzL0yqUTt+nIR1yCjQM8SHzrPgzkgffzUCYLQi7lvGPJnZsWxTnSPwzk4mzhsH2CIUnuDZQ=="],
+
+    "@wix/auto_sdk_members_custom-fields": ["@wix/auto_sdk_members_custom-fields@1.0.65", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-UpFpxkgn5EBXdHDjtaV29vsxn+JbWy94on1lWqExMC3W1R8voMTwZlmcsLetFsJq/rG3D6/nK9N/9+Kv/C7wMw=="],
+
+    "@wix/auto_sdk_members_default-privacy": ["@wix/auto_sdk_members_default-privacy@1.0.39", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-F78S+lwmH/6ho+dunzLNtDHKWV8BBsA83NMo6/vrT5y4zHvhhLKy6ZXMjiGcM5OxK9N3QjK97gW7hwbKrq9Miw=="],
+
+    "@wix/auto_sdk_members_member-followers": ["@wix/auto_sdk_members_member-followers@1.0.49", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-dfQBGtLUXdoCy0ZKSrPLy6ulItAEen+QY8JyuaB3Cv76cGWx9z5yFyHO6kKqKCAF7TH/cJlo3/MSSwFR0q232w=="],
+
+    "@wix/auto_sdk_members_member-privacy-settings": ["@wix/auto_sdk_members_member-privacy-settings@1.0.64", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-OAxst0ls1p4AXOnoLbRSxfPEcsT7sbQpOOa1NhAaMUkdgKhZoNGIU3Y9nJkZD1gNixzK9OyovkEm6WBUTiF6sA=="],
+
+    "@wix/auto_sdk_members_member-report": ["@wix/auto_sdk_members_member-report@1.0.57", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-QpPXbxQqReLT7zP/OhkwgnSIaIaSw0laCcJxFnqKsMwnuFZCsgfhyfEf5Y/hfzkPD2NhS81A9GZEapT9As29gQ=="],
+
+    "@wix/auto_sdk_members_member-report-overviews": ["@wix/auto_sdk_members_member-report-overviews@1.0.3", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-vkvSCc9S5M2lCoWI1pP1CDn2pKm2/mz/3RvgqkfWuw+3AflRoti/5ihsKKXNVAXp1uheFIiYLkvsrRwO58BTJQ=="],
+
+    "@wix/auto_sdk_members_member-role-definition": ["@wix/auto_sdk_members_member-role-definition@1.0.52", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-Cuhc3tTtQ2rflJTkjC635FXqI+AhFuJgL6KoPW8wE7WQJcW73NMfF73Hs/DreF5Uem70RpYas7q2TnvqjPdBDA=="],
+
+    "@wix/auto_sdk_members_member-to-member-block": ["@wix/auto_sdk_members_member-to-member-block@1.0.39", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-rcQq40FCEeqCdEbVQaaYq7N87rPsyjadkpBSRaPtdGY2yX0El3ueCjRBhU3/MOAciNsMUA514pkfQIFZu9pQ+w=="],
+
+    "@wix/auto_sdk_members_members": ["@wix/auto_sdk_members_members@1.0.145", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-K8CeECyt6lGifVFYv4ELDgp/WAEpW/tw32Hk4iD+Nt9g2M6LNMKLLAK2EFBn12mDYbdo4HODBNPCgSTcDXdL4Q=="],
+
+    "@wix/auto_sdk_members_members-about": ["@wix/auto_sdk_members_members-about@1.0.88", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-4s8gtPRhBU3y/bn1w0Z3tKo4SV8Gj8CoTUINem904skYYyP8c5pY4cvyeqbWGcQp864j21I8bFdiT9ZJHDyy1g=="],
+
+    "@wix/auto_sdk_members_user-member": ["@wix/auto_sdk_members_user-member@1.0.62", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-1UXtxdtN23OI/Kj0fNZ3+B5EFijqVMzCz5cVds/eakx2BcWh2ZF9CX1gm8tgUdg/0RoClTKqepo5DgSRlQF4oQ=="],
+
+    "@wix/auto_sdk_online-programs_categories": ["@wix/auto_sdk_online-programs_categories@1.0.30", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-nDyhH+vPWUYlE0JVA8AaNnB+aawlmq6fzPkkTQSoyepIKxug6HF6P/PqrOAxGriUOw6d0BaxkxZ5ne7wJP+Q6w=="],
+
+    "@wix/auto_sdk_online-programs_instructors": ["@wix/auto_sdk_online-programs_instructors@1.0.27", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-LgvWISh4t5eOhNRJ+ErOoFdciAHAqMBZGqrumxnoRPK5t5SWSi1fRL+eSWPsHU80Q7MnFptRXBowkVlBMnWHxg=="],
+
+    "@wix/auto_sdk_online-programs_join-applications": ["@wix/auto_sdk_online-programs_join-applications@1.0.19", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-YtwdGp1uRme3/rGKlNEEnTuSzNx6JjmfuvumtxeNASGV4U3TM4aj+//DYTuukUdTK+UUMKPL8onvgvc+yRXGnQ=="],
+
+    "@wix/auto_sdk_online-programs_online-program-participants": ["@wix/auto_sdk_online-programs_online-program-participants@1.0.28", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-2dBoE4aV8HmufJxgSyDJXxyhsOh5+IC/OTk5K+GM8TgHw8J2eOp98kdwf3OEkVAIRPq30o+LyqDKJYNpayVtYw=="],
+
+    "@wix/auto_sdk_online-programs_participants": ["@wix/auto_sdk_online-programs_participants@1.0.33", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-8jO4q2d1HpD2v6xZjl/KZkZlkKcEa8AeEgq21Dy/6nyrfzuG0VOLpZ4IUBcS8xCIyJWC8n2QySa+J+WrqPgcWQ=="],
+
+    "@wix/auto_sdk_online-programs_program-ai-helpers": ["@wix/auto_sdk_online-programs_program-ai-helpers@1.0.4", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-iJmE1q9BpSn/2+Vs3rkIwGxhjGmIcAa9FfQaZkgaKlmOK3C4gQvbQqRNV4an9USpHIBJTf2rrOMz13trJaeEjA=="],
+
+    "@wix/auto_sdk_online-programs_programs": ["@wix/auto_sdk_online-programs_programs@1.0.46", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-dKaSSdXxGFM/yK+JPPdmATYOUKODJbMpok9ojBlMk1oifKtmobQG7yWnj867hQn5tl11VO6WAmSwoi4ugMYsPQ=="],
+
+    "@wix/auto_sdk_online-programs_quiz-submissions": ["@wix/auto_sdk_online-programs_quiz-submissions@1.0.11", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-jBHZOl9Meb5Q2Whk6/Tiafiq6lVP32jyoJN0PWDOkfPfbKCJSAWM7O3lXRSdoaWuc8RpT60j63sCJ/m9qfKF2g=="],
+
+    "@wix/auto_sdk_online-programs_quizzes": ["@wix/auto_sdk_online-programs_quizzes@1.0.37", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-BROfs84c3bgIMspsRGVBPEbYwWyPoFpsScNJ/hUea42pcsS+1ynAY5rE9hiiMGB5nyF7WL/hvzeImO7ILKMing=="],
+
+    "@wix/auto_sdk_online-programs_resolved-steps": ["@wix/auto_sdk_online-programs_resolved-steps@1.0.10", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-NfSvuDYqIKwtqUIHQPn181XbI6piM6Ic5Gow1+H/Bej+XqY0p2erlbHAtzhyqz7gOiaKwkULPua3LY50F3L3sw=="],
+
+    "@wix/auto_sdk_online-programs_sections": ["@wix/auto_sdk_online-programs_sections@1.0.42", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-pNES2/RrRk9kZksAEvBzUjtnuVIpAc0OJO42JV+pF58unp2i+LHbs8M2mIZdTJUFi5KwD16uak6fz1HxQKzZXg=="],
+
+    "@wix/auto_sdk_online-programs_steps": ["@wix/auto_sdk_online-programs_steps@1.0.33", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.30", "@wix/sdk-types": "^1.17.12" } }, "sha512-+cScN73sd2BwhGelhKClJwKMDW5S2Yf71t2PYnfwnwagcMOk+uTpAsPtjL2RUWZnVcjw00U7hf21I6fEP/iv3Q=="],
+
     "@wix/auto_sdk_pricing-plans_orders": ["@wix/auto_sdk_pricing-plans_orders@1.0.138", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.24", "@wix/sdk-types": "^1.17.11" } }, "sha512-JfvfdDMEHtF0o1DRFqelQK/CLqbEtVcJmvGJHgs80HAoVfJtSngKweEv/QlLfdv1j8RiOsWmxa1XT+CaeH9bzA=="],
 
     "@wix/auto_sdk_pricing-plans_plan-benefits": ["@wix/auto_sdk_pricing-plans_plan-benefits@1.0.27", "", { "dependencies": { "@wix/sdk-runtime": "^1.0.24", "@wix/sdk-types": "^1.17.11" } }, "sha512-OrVBjJGasLI8LMuZKRAu1T6jOdI1dUGjqMPbZsoTCvl3NWIu/OIeZI87fp6KvGNtBwmac8rZwOoAHfpHSFx3mg=="],
@@ -393,6 +455,8 @@
 
     "@wix/headless-media": ["@wix/headless-media@0.0.20", "", { "dependencies": { "@wix/sdk": "^1.17.1", "@wix/services-definitions": "^1.0.1", "@wix/services-manager-react": "^1.0.3" } }, "sha512-hJkAjNcr2ttfCogHlzDSbyjBfMbIFqu4CjPh+7oXcnQWHti+VDn1hpT3BsFGjdTVb6WyXNTrCWSOAWwbg2/ghw=="],
 
+    "@wix/headless-online-programs": ["@wix/headless-online-programs@0.0.11", "", { "dependencies": { "@radix-ui/react-slot": "^1.1.0", "@wix/headless-media": "0.0.20", "@wix/headless-utils": "0.0.8", "@wix/members": "^1.0.322", "@wix/online-programs": "^1.0.47", "@wix/redirects": "^1.0.0", "@wix/sdk": "^1.15.27", "@wix/services-definitions": "^1.0.1", "@wix/services-manager-react": "^1.0.3" }, "peerDependencies": { "@wix/headless-components": "^0.0.0" } }, "sha512-u/SGXZfJ51QAwfnQFe8STLHscvmNthZnYx60UiMk16oEGWdyOGtvRkaonLv29R1N5nX5xRKrNczpW/6t3Q5FsQ=="],
+
     "@wix/headless-pricing-plans": ["@wix/headless-pricing-plans@0.0.22", "", { "dependencies": { "@radix-ui/react-slot": "^1.1.0", "@wix/essentials": "^0.1.28", "@wix/headless-ecom": "0.0.40", "@wix/headless-media": "0.0.20", "@wix/headless-utils": "0.0.8", "@wix/pricing-plans": "^1.0.221", "@wix/redirects": "^1.0.0", "@wix/sdk": "^1.15.27", "@wix/services-definitions": "^1.0.1", "@wix/services-manager-react": "^1.0.3" }, "peerDependencies": { "@wix/headless-components": "^0.0.0" } }, "sha512-UoEveDTVRuolrnu4b38cJi4DmTfndCcnfV3KCCvsdlX6ubo929gVJ2wEZ06m3Op4+cSldCNVQruk0ISIyCM/fA=="],
 
     "@wix/headless-utils": ["@wix/headless-utils@0.0.8", "", { "dependencies": { "@radix-ui/react-slot": "^1.2.3" }, "peerDependencies": { "react": ">=16.3.0" } }, "sha512-BcLXiNXc4p5O9PRbfqk/3C9OIELjelB0C3qkYQu9oQDa8QZtQ06/ZRHAviM+DD7+jOgAw1larc+58Zq/54xBKw=="],
@@ -401,9 +465,13 @@
 
     "@wix/image-kit": ["@wix/image-kit@1.127.0", "", { "dependencies": { "@babel/runtime": "^7.26.0", "tslib": "^2.8.1" } }, "sha512-A3uys4sUWftf7QAT1gL26uynNzG/7vgtTjKUvISuneRxmI83HMNz46y+yGnMoAoJJrwT80772hFAScVItKHFhQ=="],
 
+    "@wix/members": ["@wix/members@1.0.541", "", { "dependencies": { "@wix/auto_sdk_members_authentication": "1.0.60", "@wix/auto_sdk_members_authorization": "1.0.40", "@wix/auto_sdk_members_badge-assignments": "1.0.35", "@wix/auto_sdk_members_badges": "1.0.57", "@wix/auto_sdk_members_badges-v-2": "1.0.42", "@wix/auto_sdk_members_custom-field-applications": "1.0.46", "@wix/auto_sdk_members_custom-field-suggestions": "1.0.45", "@wix/auto_sdk_members_custom-fields": "1.0.65", "@wix/auto_sdk_members_default-privacy": "1.0.39", "@wix/auto_sdk_members_member-followers": "1.0.49", "@wix/auto_sdk_members_member-privacy-settings": "1.0.64", "@wix/auto_sdk_members_member-report": "1.0.57", "@wix/auto_sdk_members_member-report-overviews": "1.0.3", "@wix/auto_sdk_members_member-role-definition": "1.0.52", "@wix/auto_sdk_members_member-to-member-block": "1.0.39", "@wix/auto_sdk_members_members": "1.0.145", "@wix/auto_sdk_members_members-about": "1.0.88", "@wix/auto_sdk_members_user-member": "1.0.62" } }, "sha512-nPFtH9XpxgzpNRUJgKaWqK8a1VkW02GVtW2AQlC29SqaJg1DDz1N5+v7VcBgkAmuf1+wvfboMhQKZ7A0lJk2pQ=="],
+
     "@wix/monitoring": ["@wix/monitoring@0.21.0", "", { "dependencies": { "@wix/monitoring-types": "0.12.0" } }, "sha512-2KC4ZuJE4abToc2QelY7Bv99BOfbvZiAK8PY5090iP4YVGM9t+VgUdg8H6l94Q0bF/vF44dcA9rjFiEcUz4K7g=="],
 
     "@wix/monitoring-types": ["@wix/monitoring-types@1.1.0", "", {}, "sha512-BkGRTEDyPtvn/+TByciSUZEIwfgpxsXYcZJn26CIzwPqiehgk+akFROHArI8aAMzbAqs/+2OKerEm7U8ZDT7hQ=="],
+
+    "@wix/online-programs": ["@wix/online-programs@1.0.232", "", { "dependencies": { "@wix/auto_sdk_online-programs_categories": "1.0.30", "@wix/auto_sdk_online-programs_instructors": "1.0.27", "@wix/auto_sdk_online-programs_join-applications": "1.0.19", "@wix/auto_sdk_online-programs_online-program-participants": "1.0.28", "@wix/auto_sdk_online-programs_participants": "1.0.33", "@wix/auto_sdk_online-programs_program-ai-helpers": "1.0.4", "@wix/auto_sdk_online-programs_programs": "1.0.46", "@wix/auto_sdk_online-programs_quiz-submissions": "1.0.11", "@wix/auto_sdk_online-programs_quizzes": "1.0.37", "@wix/auto_sdk_online-programs_resolved-steps": "1.0.10", "@wix/auto_sdk_online-programs_sections": "1.0.42", "@wix/auto_sdk_online-programs_steps": "1.0.33", "@wix/headless-online-programs": "^0.0.11" } }, "sha512-jUm2l/xtUWgPQHLV0Jyu3VguhiGQwedeK+pOqQ4G53GMODpHZGurGa5v2vK5TBmd1adB2ocXm8FyqDY5/tEV9Q=="],
 
     "@wix/pricing-plans": ["@wix/pricing-plans@1.0.423", "", { "dependencies": { "@wix/auto_sdk_pricing-plans_orders": "1.0.138", "@wix/auto_sdk_pricing-plans_plan-benefits": "1.0.27", "@wix/auto_sdk_pricing-plans_plan-subscriptions": "1.0.0", "@wix/auto_sdk_pricing-plans_plans": "1.0.118", "@wix/auto_sdk_pricing-plans_plans-v-3": "1.0.132", "@wix/auto_sdk_pricing-plans_pricing-plans-settings": "1.0.61", "@wix/auto_sdk_pricing-plans_pricing-variant-categories": "1.0.4", "@wix/headless-pricing-plans": "^0.0.22" } }, "sha512-jugO9RqaOfdA+1FoNEtlPQ/ExgILC+x1h8WEIXBqMD8mvcjkZpzjPEs/23zcredCrIK0BAYxbK1bpuSLI6mrpg=="],
 
@@ -602,6 +670,66 @@
     "zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
+
+    "@wix/auto_sdk_members_authentication/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_authorization/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_badge-assignments/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_badges/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_badges-v-2/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_custom-field-applications/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_custom-field-suggestions/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_custom-fields/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_default-privacy/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_member-followers/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_member-privacy-settings/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_member-report/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_member-report-overviews/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_member-role-definition/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_member-to-member-block/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_members/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_members-about/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_members_user-member/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_categories/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_instructors/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_join-applications/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_online-program-participants/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_participants/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_program-ai-helpers/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_programs/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_quiz-submissions/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_quizzes/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_resolved-steps/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_sections/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
+
+    "@wix/auto_sdk_online-programs_steps/@wix/sdk-runtime": ["@wix/sdk-runtime@1.0.31", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.17.12" } }, "sha512-Re8c7FaOHVDfrJL0622M3EgH0o4atE2s7lkenDFYEWxBqRmP/a6VtxQeBzFTop85CpEgtGMPpkvUZjV+mJWJ/w=="],
 
     "@wix/essentials/@wix/sdk-runtime": ["@wix/sdk-runtime@0.3.62", "", { "dependencies": { "@wix/sdk-context": "0.0.1", "@wix/sdk-types": "^1.13.41" } }, "sha512-5imt9mSEaceX365iLGzMJ7jS4qr4lJj+2DZox86Ge8P7V9IeuPYLsQ+0PN9wN6XgMfjNLHt4G6hJUIi3bdglGA=="],
 

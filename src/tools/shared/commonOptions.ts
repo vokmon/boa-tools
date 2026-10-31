@@ -22,17 +22,30 @@ export interface DateRangeOptions {
   defaultTo: string;
   /** Use defaultFrom instead of failing when --from is omitted without a terminal. */
   fromDefaultsWithoutTerminal?: boolean;
+  /**
+   * Lets From be left empty (or "all") for "everything": `from` is then this date and `all` is true.
+   * It is also used when --from is omitted without a terminal. defaultFrom is not shown then.
+   */
+  allFrom?: string;
 }
 
 /** --from / --to as flags or prompts; `to` must not be before `from`. */
-export async function resolveDateRange(options: DateRangeOptions): Promise<{ from: string; to: string }> {
-  const from = await resolveOption({
+export async function resolveDateRange(options: DateRangeOptions): Promise<{ from: string; to: string; all: boolean }> {
+  const { allFrom } = options;
+  // null means "all"; only possible with allFrom.
+  const parseFrom = (raw: string): string | null => (allFrom !== undefined && ["", "all"].includes(raw.trim().toLowerCase()) ? null : parseDate(raw));
+  const fromOrAll = await resolveOption<string | null>({
     flag: "--from",
     value: options.from,
-    parse: parseDate,
-    ask: () => askParsed("From (dd/mm/yyyy):", parseDate, { default: options.defaultFrom }),
-    fallback: options.fromDefaultsWithoutTerminal ? () => options.defaultFrom : undefined,
+    parse: parseFrom,
+    ask: () =>
+      allFrom === undefined
+        ? askParsed("From (dd/mm/yyyy):", parseDate, { default: options.defaultFrom })
+        : askParsed("From (dd/mm/yyyy, empty for all):", parseFrom),
+    fallback: allFrom !== undefined ? () => null : options.fromDefaultsWithoutTerminal ? () => options.defaultFrom : undefined,
   });
+  const all = fromOrAll === null;
+  const from = fromOrAll ?? allFrom!;
   const defaultTo = options.defaultTo;
   const parseTo = (raw: string) => {
     const to = parseDate(raw);
@@ -46,7 +59,7 @@ export async function resolveDateRange(options: DateRangeOptions): Promise<{ fro
     ask: () => askParsed("To (dd/mm/yyyy):", parseTo, { default: defaultTo }),
     fallback: () => defaultTo,
   });
-  return { from, to };
+  return { from, to, all };
 }
 
 /** "all" or comma-separated slugs, validated against the projects the token can see. */

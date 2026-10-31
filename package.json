@@ -6,6 +6,7 @@
     "subscriber-usage": "bun src/tools/subscriber-usage/index.ts",
     "user-report": "bun src/tools/user-report/index.ts",
     "follow-up-logins": "bun src/tools/follow-up-logins/index.ts",
+    "member-report": "bun src/tools/member-report/index.ts",
     "collect-candles": "bun src/tools/collect-candles/index.ts",
     "backtest": "bun src/tools/backtest/index.ts",
     "typecheck": "tsc --noEmit",
@@ -17,6 +18,8 @@
     "@quadcode-tech/client-sdk-js": "1.3.26",
     "@sentry/api": "^0.368.0",
     "@wix/crm": "^1.0.1662",
+    "@wix/members": "^1.0.541",
+    "@wix/online-programs": "^1.0.232",
     "@wix/pricing-plans": "^1.0.423",
     "@wix/sdk": "^1.21.18",
     "zod": "^4.6.7"
