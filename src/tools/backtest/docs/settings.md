@@ -47,6 +47,7 @@ Where the close sits in its recent range, 0 to 100. A PUT needs both %K and %D v
 | Setting | What it is | Raising it | Bot | Allowed |
 |---|---|---|---|---|
 | `stochastic.use` Use the stochastic | Whether this rule is used: true or false. Every rule that is used must pass. | - | true | true / false |
+| `stochastic.useD` Check %D too | Whether a PUT also needs %D above the level (a CALL below), not only %K. iq-robot checks %K only since 27/10/2026. | Off: more signals. | true | true / false |
 | `stochastic.k` %K length (candles) | How many candles the stochastic range covers. | Higher: a longer range, slower to reach the extremes. | 13 | 2-60 (whole) |
 | `stochastic.d` %D length | How many %K values %D averages. | Higher: a smoother, slower %D. | 3 | 1-20 (whole) |
 | `stochastic.smooth` %K smoothing | How many raw values %K averages. | Higher: a smoother, slower %K. | 3 | 1-20 (whole) |

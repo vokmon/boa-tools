@@ -12,6 +12,8 @@ export interface SignalSettings {
   useDonchian: boolean;
   useBollinger: boolean;
   useStochastic: boolean;
+  /** The stochastic also needs %D past the level, not only %K (iq-robot before 27/10/2026). */
+  stochasticUseD: boolean;
 
   /** Support/resistance box: the highest high / lowest low of this many candles. */
   supportResistancePeriod: number;
@@ -61,6 +63,7 @@ export const DEFAULT_SIGNAL_SETTINGS: Readonly<SignalSettings> = Object.freeze({
   useDonchian: true,
   useBollinger: true,
   useStochastic: true,
+  stochasticUseD: true,
   supportResistancePeriod: 25,
   zonePositionThreshold: 0.92,
   donchianPeriod: 20,

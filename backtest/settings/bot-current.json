@@ -3,7 +3,7 @@
   "supportResistance": { "use": true, "period": 25, "zone": 0.92 },
   "donchian": { "use": true, "period": 20 },
   "bollinger": { "use": true, "period": 14, "stdDev": 2 },
-  "stochastic": { "use": true, "k": 13, "d": 3, "smooth": 3, "level": 85 },
+  "stochastic": { "use": true, "useD": true, "k": 13, "d": 3, "smooth": 3, "level": 85 },
   "candle": {
     "sameColourInARow": 3,
     "minBody": 0.6,

@@ -88,8 +88,8 @@ export class SignalEngine {
       if (stoch) {
         const k = stoch.k[e]!;
         const d = stoch.d[e]!;
-        up &&= k > s.stochasticKOverbought && d > s.stochasticDOverbought;
-        down &&= k < s.stochasticKOversold && d < s.stochasticDOversold;
+        up &&= k > s.stochasticKOverbought && (!s.stochasticUseD || d > s.stochasticDOverbought);
+        down &&= k < s.stochasticKOversold && (!s.stochasticUseD || d < s.stochasticDOversold);
         if (!up && !down) continue;
       }
       const high = this.highs[e]!;

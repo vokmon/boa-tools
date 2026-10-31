@@ -43,6 +43,7 @@ export function defaultValues(): Record<string, number | string | boolean> {
     "bollinger.period": s.bollingerPeriod,
     "bollinger.stdDev": s.bollingerStdDev,
     "stochastic.use": s.useStochastic,
+    "stochastic.useD": s.stochasticUseD,
     "stochastic.k": s.stochasticKPeriod,
     "stochastic.d": s.stochasticDPeriod,
     "stochastic.smooth": s.stochasticSmoothing,
@@ -197,6 +198,7 @@ function toRunSetting(file: string, values: Record<string, number | string | boo
   signal.useDonchian = values["donchian.use"] === true;
   signal.useBollinger = values["bollinger.use"] === true;
   signal.useStochastic = values["stochastic.use"] === true;
+  signal.stochasticUseD = values["stochastic.useD"] === true;
   if (signal.sizeLookback + signal.candlesToCheckSize > signal.windowSize) {
     throw new SettingsError(`${file}: candle.sizeLookback + candle.sizeCandles must be at most ${signal.windowSize}`);
   }

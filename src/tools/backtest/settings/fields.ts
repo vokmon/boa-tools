@@ -58,5 +58,7 @@ export const CHOICE_FIELDS: Readonly<Record<string, readonly (string | boolean)[
   "donchian.use": [true, false],
   "bollinger.use": [true, false],
   "stochastic.use": [true, false],
+  // %D past the level as well as %K
+  "stochastic.useD": [true, false],
   "martingale.type": ["standard", "recovery", "cover"],
 };
