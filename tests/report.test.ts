@@ -43,7 +43,7 @@ describe("renderReport", () => {
     // The two multipliers and two max-open values of "x" are one signal, switched in the page
     expect(data.settings.map((s: { label: string }) => s.label)).toEqual(["bot-current", "x"]);
     expect(data.settings[1].note).toBe("</script><b>hi</b>");
-    expect(data.settings[1].changes).toEqual(["stochastic.level 85→90"]);
+    expect(data.settings[1].changes).toEqual(["stochastic.level 80→90"]);
     expect(Object.keys(data.settings[1].views).sort()).toEqual(["2.2|0", "2.2|1", "2.5|0", "2.5|1"]);
     expect(data.maxOpenOptions).toEqual([1, 0]);
     expect(Object.keys(data.settings[0].views["2.5|0"])).toEqual(["total", "main", "otc"]);

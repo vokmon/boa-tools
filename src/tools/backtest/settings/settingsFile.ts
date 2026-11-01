@@ -52,6 +52,7 @@ export function defaultValues(): Record<string, number | string | boolean> {
     "candle.minBody": s.minBodyRatio,
     "candle.maxWick": s.maxRejectionWickRatio,
     "candle.checkLast": s.candlesToCheckBodyAndWicks,
+    "candle.useSize": s.useCandleSize,
     "candle.minSizeVsAverage": s.minCandleSizeRatio,
     "candle.sizeCandles": s.candlesToCheckSize,
     "candle.sizeLookback": s.sizeLookback,
@@ -199,7 +200,8 @@ function toRunSetting(file: string, values: Record<string, number | string | boo
   signal.useBollinger = values["bollinger.use"] === true;
   signal.useStochastic = values["stochastic.use"] === true;
   signal.stochasticUseD = values["stochastic.useD"] === true;
-  if (signal.sizeLookback + signal.candlesToCheckSize > signal.windowSize) {
+  signal.useCandleSize = values["candle.useSize"] === true;
+  if (signal.useCandleSize && signal.sizeLookback + signal.candlesToCheckSize > signal.windowSize) {
     throw new SettingsError(`${file}: candle.sizeLookback + candle.sizeCandles must be at most ${signal.windowSize}`);
   }
   return {

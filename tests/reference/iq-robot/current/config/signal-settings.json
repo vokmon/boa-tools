@@ -1,0 +1,21 @@
+{
+  "window": { "candles": 100, "minCandles": 20 },
+  "supportResistance": { "use": true, "period": 25, "zone": 0.95 },
+  "donchian": { "use": true, "period": 20 },
+  "bollinger": { "use": true, "period": 14, "stdDev": 2 },
+  "stochastic": {
+    "use": true,
+    "k": 14,
+    "d": 3,
+    "smooth": 3,
+    "kOverbought": 80,
+    "kOversold": 20
+  },
+  "rsi": { "period": 14 },
+  "candle": {
+    "sameColourInARow": 3,
+    "useShape": true,
+    "minBody": 0.8,
+    "maxWick": 0.2
+  }
+}

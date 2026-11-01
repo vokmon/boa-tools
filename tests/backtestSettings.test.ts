@@ -49,6 +49,22 @@ describe("parseSettingsFile", () => {
     expect(() => parseSettingsFile("x", { sessions: TEST_SESSIONS, donchian: { use: "off" } })).toThrow('"donchian.use" must be true or false');
   });
 
+  test("the bot's current file matches iq-robot since 27/10/2026: %K only, no size rule", async () => {
+    const raw = JSON.parse(await Bun.file("backtest/settings/bot-current.json").text());
+    const [s] = parseSettingsFile("bot-current", raw);
+    expect(s!.signal).toMatchObject({
+      zonePositionThreshold: 0.95,
+      stochasticKPeriod: 14,
+      stochasticKOverbought: 80,
+      stochasticKOversold: 20,
+      stochasticUseD: false,
+      minBodyRatio: 0.8,
+      maxRejectionWickRatio: 0.2,
+      candlesToCheckBodyAndWicks: 1,
+      useCandleSize: false,
+    });
+  });
+
   test("every problem is listed with its path", () => {
     expect(() =>
       parseSettingsFile("bad", { sessions: TEST_SESSIONS, bolinger: { period: 14 }, bollinger: { priod: 3 }, candle: { minBody: 1.5, sameColourInARow: 2.5 }, martingale: { type: "double" }, hours: ["7-30"] }),

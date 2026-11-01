@@ -23,7 +23,7 @@ describe("format", () => {
 
   test("a tested setting is saved as a full settings file, like bot-current.json", async () => {
     const [s] = parseSettingsFile("x", { sessions: TEST_SESSIONS, stochastic: { level: 90 }, hours: ["07-11"], note: "try" });
-    expect(changesFromBot(s!.values)).toEqual(["stochastic.level 85→90", "hours 07-11"]);
+    expect(changesFromBot(s!.values)).toEqual(["stochastic.level 80→90", "hours 07-11"]);
     const saved = settingsFileJson(s!.values, s!.note, s!.sessions);
     const botCurrent = await Bun.file("backtest/settings/bot-current.json").json();
     expect(Object.keys(saved)).toEqual([...Object.keys(botCurrent).filter((k) => k !== "sessions"), "hours", "sessions"]);

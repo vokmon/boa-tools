@@ -117,8 +117,9 @@ export class SignalEngine {
         up &&= upperZone > 0 && (high - mid) / upperZone >= s.zonePositionThreshold;
         down &&= lowerZone > 0 && (mid - low) / lowerZone >= s.zonePositionThreshold;
       }
-      if (up && this.shapeOk(e, start, s, true) && this.sizeOk(e, start, s)) out[e] = PUT;
-      else if (down && this.shapeOk(e, start, s, false) && this.sizeOk(e, start, s)) out[e] = CALL;
+      const sizeOk = (): boolean => !s.useCandleSize || this.sizeOk(e, start, s);
+      if (up && this.shapeOk(e, start, s, true) && sizeOk()) out[e] = PUT;
+      else if (down && this.shapeOk(e, start, s, false) && sizeOk()) out[e] = CALL;
     }
     return out;
   }

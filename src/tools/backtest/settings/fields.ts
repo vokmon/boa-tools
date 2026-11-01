@@ -28,7 +28,7 @@ export const NUMBER_FIELDS: readonly NumberField[] = [
   { path: "stochastic.smooth", about: "stochastic %K smoothing", integer: true, min: 1, max: 20, tryRange: [1, 5], signal: ["stochasticSmoothing"] },
   {
     path: "stochastic.level",
-    about: "PUT only when %K and %D are above this; CALL when below 100 minus it (higher = more stretched, rarer)",
+    about: "PUT only when %K (and %D with stochastic.useD) is above this; CALL when below 100 minus it (higher = more stretched, rarer)",
     integer: false,
     min: 50,
     max: 100,
@@ -60,5 +60,7 @@ export const CHOICE_FIELDS: Readonly<Record<string, readonly (string | boolean)[
   "stochastic.use": [true, false],
   // %D past the level as well as %K
   "stochastic.useD": [true, false],
+  // the candle size rule (minSizeVsAverage, sizeCandles, sizeLookback)
+  "candle.useSize": [true, false],
   "martingale.type": ["standard", "recovery", "cover"],
 };

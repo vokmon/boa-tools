@@ -1,6 +1,6 @@
 /**
  * Every knob of the bot's signal. Defaults are the values iq-robot uses today
- * (`signalWithCandleCalculator.ts` with an empty config). A PUT needs all of the "PUT" rules below,
+ * (`signalWithCandleCalculator.ts` with `config/signal-settings.json`, since 27/10/2026). A PUT needs all of the "PUT" rules below,
  * a CALL the mirrored ones.
  */
 export interface SignalSettings {
@@ -49,6 +49,8 @@ export interface SignalSettings {
   /** The body and wick rules apply to this many latest candles. */
   candlesToCheckBodyAndWicks: number;
 
+  /** Whether the size rule below is used (iq-robot dropped it on 27/10/2026). */
+  useCandleSize: boolean;
   /** The latest this-many candles must not be small... */
   candlesToCheckSize: number;
   /** ...compared with the average body of this many candles before them... */
@@ -63,23 +65,24 @@ export const DEFAULT_SIGNAL_SETTINGS: Readonly<SignalSettings> = Object.freeze({
   useDonchian: true,
   useBollinger: true,
   useStochastic: true,
-  stochasticUseD: true,
+  stochasticUseD: false,
   supportResistancePeriod: 25,
-  zonePositionThreshold: 0.92,
+  zonePositionThreshold: 0.95,
   donchianPeriod: 20,
   bollingerPeriod: 14,
   bollingerStdDev: 2,
-  stochasticKPeriod: 13,
+  stochasticKPeriod: 14,
   stochasticDPeriod: 3,
   stochasticSmoothing: 3,
-  stochasticKOverbought: 85,
-  stochasticKOversold: 15,
-  stochasticDOverbought: 85,
-  stochasticDOversold: 15,
+  stochasticKOverbought: 80,
+  stochasticKOversold: 20,
+  stochasticDOverbought: 80,
+  stochasticDOversold: 20,
   consecutiveCandles: 3,
-  minBodyRatio: 0.6,
-  maxRejectionWickRatio: 0.25,
+  minBodyRatio: 0.8,
+  maxRejectionWickRatio: 0.2,
   candlesToCheckBodyAndWicks: 1,
+  useCandleSize: false,
   candlesToCheckSize: 3,
   // iq-robot: max(minCandleSizeLookbackPeriod 25, floor(windowSize 100 * lookbackPercentage 0.35))
   sizeLookback: 35,

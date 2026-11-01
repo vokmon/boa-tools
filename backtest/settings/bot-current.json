@@ -1,17 +1,15 @@
 {
-  "note": "The bot's current settings (iq-robot as of 22/10/2026), with 4 martingale levels, at x2.5 (the bot) and x2.2, and with at most 1, 2, 3 or any number of rounds open at once",
-  "supportResistance": { "use": true, "period": 25, "zone": 0.92 },
+  "note": "The bot's current settings (iq-robot as of 27/10/2026: %K only, no size rule), with 4 martingale levels, at x2.5 (the bot) and x2.2, and with at most 1, 2, 3 or any number of rounds open at once",
+  "supportResistance": { "use": true, "period": 25, "zone": 0.95 },
   "donchian": { "use": true, "period": 20 },
   "bollinger": { "use": true, "period": 14, "stdDev": 2 },
-  "stochastic": { "use": true, "useD": true, "k": 13, "d": 3, "smooth": 3, "level": 85 },
+  "stochastic": { "use": true, "useD": false, "k": 14, "d": 3, "smooth": 3, "level": 80 },
   "candle": {
     "sameColourInARow": 3,
-    "minBody": 0.6,
-    "maxWick": 0.25,
+    "minBody": 0.8,
+    "maxWick": 0.2,
     "checkLast": 1,
-    "minSizeVsAverage": 0.75,
-    "sizeCandles": 3,
-    "sizeLookback": 35
+    "useSize": false
   },
   "martingale": { "type": "standard", "multiplier": [2.5, 2.2], "levels": 4 },
   "order": { "amount": 30, "payout": 85 },

@@ -19,7 +19,7 @@ A box made of the highest high and lowest low of recent candles. A PUT needs the
 |---|---|---|---|---|
 | `supportResistance.use` Use support / resistance | Whether this rule is used: true or false. Every rule that is used must pass. | - | true | true / false |
 | `supportResistance.period` Box length (candles) | How many candles the support/resistance box covers. | Higher: a wider box, so being near its edge is rarer. | 25 | 2-90 (whole) |
-| `supportResistance.zone` How close to the edge (0-1) | How far into the top or bottom half of the box the candle must reach; 1 is the very edge. | Higher: only candles right at the edge count, fewer signals. | 0.92 | 0-1 |
+| `supportResistance.zone` How close to the edge (0-1) | How far into the top or bottom half of the box the candle must reach; 1 is the very edge. | Higher: only candles right at the edge count, fewer signals. | 0.95 | 0-1 |
 
 ## Donchian channel
 
@@ -42,27 +42,28 @@ Bands around the average price, as wide as the recent price swings. A PUT needs 
 
 ## Stochastic
 
-Where the close sits in its recent range, 0 to 100. A PUT needs both %K and %D very high (stretched up), a CALL both very low.
+Where the close sits in its recent range, 0 to 100. A PUT needs %K very high (stretched up), a CALL very low; with `useD`, %D too.
 
 | Setting | What it is | Raising it | Bot | Allowed |
 |---|---|---|---|---|
 | `stochastic.use` Use the stochastic | Whether this rule is used: true or false. Every rule that is used must pass. | - | true | true / false |
-| `stochastic.useD` Check %D too | Whether a PUT also needs %D above the level (a CALL below), not only %K. iq-robot checks %K only since 27/10/2026. | Off: more signals. | true | true / false |
-| `stochastic.k` %K length (candles) | How many candles the stochastic range covers. | Higher: a longer range, slower to reach the extremes. | 13 | 2-60 (whole) |
+| `stochastic.useD` Check %D too | Whether a PUT also needs %D above the level (a CALL below), not only %K. iq-robot checks %K only since 27/10/2026. | Off: more signals. | false | true / false |
+| `stochastic.k` %K length (candles) | How many candles the stochastic range covers. | Higher: a longer range, slower to reach the extremes. | 14 | 2-60 (whole) |
 | `stochastic.d` %D length | How many %K values %D averages. | Higher: a smoother, slower %D. | 3 | 1-20 (whole) |
 | `stochastic.smooth` %K smoothing | How many raw values %K averages. | Higher: a smoother, slower %K. | 3 | 1-20 (whole) |
-| `stochastic.level` Extreme level | A PUT needs %K and %D above this, a CALL below 100 minus it. | Higher: only more stretched prices count, fewer signals. | 85 | 50-100 |
+| `stochastic.level` Extreme level | A PUT needs %K (and %D with `useD`) above this, a CALL below 100 minus it. | Higher: only more stretched prices count, fewer signals. | 80 | 50-100 |
 
 ## Candle shape and size
 
-The signal candle must be a solid move: a big body, a small wick against the move, several candles of the same colour in a row, and not small compared with recent candles.
+The signal candle must be a solid move: a big body, a small wick against the move, several candles of the same colour in a row, and (with `useSize`) not small compared with recent candles.
 
 | Setting | What it is | Raising it | Bot | Allowed |
 |---|---|---|---|---|
 | `candle.sameColourInARow` Same colour in a row | How many candles of the same colour must come in a row, ending with the signal candle. | Higher: needs a longer run, fewer signals. | 3 | 1-20 (whole) |
-| `candle.minBody` Minimum body (0-1) | The body must be at least this share of the candle's high-to-low range. | Higher: only solid candles, fewer signals. | 0.6 | 0-1 |
-| `candle.maxWick` Maximum wick against the move (0-1) | The wick against the move (upper for PUT, lower for CALL) must be under this share of the range. | Higher: allows bigger wicks, more signals. | 0.25 | 0-1 |
+| `candle.minBody` Minimum body (0-1) | The body must be at least this share of the candle's high-to-low range. | Higher: only solid candles, fewer signals. | 0.8 | 0-1 |
+| `candle.maxWick` Maximum wick against the move (0-1) | The wick against the move (upper for PUT, lower for CALL) must be under this share of the range. | Higher: allows bigger wicks, more signals. | 0.2 | 0-1 |
 | `candle.checkLast` Candles checked for body and wick | How many latest candles must pass the body rule; the signal candle's wick must also be the smallest of them. | Higher: stricter, fewer signals. | 1 | 1-10 (whole) |
+| `candle.useSize` Use the size rule | Whether the size rule below (`minSizeVsAverage`, `sizeCandles`, `sizeLookback`) is used: true or false. iq-robot has no size rule since 27/10/2026. | Off: more signals. | false | true / false |
 | `candle.minSizeVsAverage` Minimum size vs recent average | The latest candles' bodies must each be at least this many times the average body of the candles before them. | Higher: needs bigger candles than usual, fewer signals. | 0.75 | 0-5 |
 | `candle.sizeCandles` Candles checked for size | How many latest candles the size rule applies to. | Higher: stricter, fewer signals. | 3 | 1-10 (whole) |
 | `candle.sizeLookback` Candles in the average size | How many earlier candles the average body is taken over. | Higher: a longer-term average. | 35 | 5-90 (whole) |

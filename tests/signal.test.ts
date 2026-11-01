@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { calculateSignalWithCandle, type SignalCalculationConfig } from "./reference/iq-robot/signalWithCandleCalculator";
+import { calculateSignalWithCandle as calculateCurrentSignal } from "./reference/iq-robot/current/signalWithCandleCalculator";
 import { SignalEngine, withDefaults, type Candle, type SignalSettings } from "@/domain/signal";
 import { consecutiveColours, rollingMax, rollingMin } from "@/domain/signal/indicators";
 
@@ -14,7 +15,24 @@ const series = fixture.series.map((s) => ({
   candles: s.candles.map(([from, open, close, min, max]): Candle => ({ from, open, close, min, max })),
 }));
 
-/** The settings as iq-robot's config, for the knobs iq-robot lets a caller change. */
+/**
+ * The bot's settings before 27/10/2026, which the older iq-robot copy implements: %K and %D, the
+ * size rule, and the values of that time.
+ */
+const BEFORE_27_10: Partial<SignalSettings> = {
+  stochasticUseD: true,
+  useCandleSize: true,
+  zonePositionThreshold: 0.92,
+  stochasticKPeriod: 13,
+  stochasticKOverbought: 85,
+  stochasticKOversold: 15,
+  stochasticDOverbought: 85,
+  stochasticDOversold: 15,
+  minBodyRatio: 0.6,
+  maxRejectionWickRatio: 0.25,
+};
+
+/** The settings as the older iq-robot's config, for the knobs it lets a caller change. */
 function referenceConfig(s: SignalSettings): SignalCalculationConfig {
   return {
     supportResistancePeriod: s.supportResistancePeriod,
@@ -37,18 +55,42 @@ function referenceConfig(s: SignalSettings): SignalCalculationConfig {
   };
 }
 
+/** The settings as the current iq-robot's signal-settings.json. */
+function currentReferenceSettings(s: SignalSettings) {
+  return {
+    window: { candles: s.windowSize, minCandles: 20 },
+    supportResistance: { use: s.useSupportResistance, period: s.supportResistancePeriod, zone: s.zonePositionThreshold },
+    donchian: { use: s.useDonchian, period: s.donchianPeriod },
+    bollinger: { use: s.useBollinger, period: s.bollingerPeriod, stdDev: s.bollingerStdDev },
+    stochastic: { use: s.useStochastic, k: s.stochasticKPeriod, d: s.stochasticDPeriod, smooth: s.stochasticSmoothing, kOverbought: s.stochasticKOverbought, kOversold: s.stochasticKOversold },
+    rsi: { period: 14 },
+    candle: { sameColourInARow: s.consecutiveCandles, useShape: true, minBody: s.minBodyRatio, maxWick: s.maxRejectionWickRatio },
+  };
+}
+
 /** What the bot does: for each candle with a full gap-free window, run iq-robot on that window. */
-function referenceSignals(candles: readonly Candle[], s: SignalSettings): Int8Array {
+function signalsOf(candles: readonly Candle[], windowSize: number, calculate: (window: never) => { signal: string }): Int8Array {
   const out = new Int8Array(candles.length);
-  const config = referenceConfig(s);
-  for (let e = s.windowSize - 1; e < candles.length; e++) {
-    const window = candles.slice(e - s.windowSize + 1, e + 1);
+  for (let e = windowSize - 1; e < candles.length; e++) {
+    const window = candles.slice(e - windowSize + 1, e + 1);
     if (window.some((c, i) => i > 0 && c.from - window[i - 1]!.from !== SIZE)) continue;
     const sdkCandles = window.map((c) => ({ ...c, id: c.from / SIZE, to: c.from + SIZE, volume: 0, at: undefined }));
-    const { signal } = calculateSignalWithCandle(sdkCandles as never, config);
+    const { signal } = calculate(sdkCandles as never);
     out[e] = signal === "put" ? -1 : signal === "call" ? 1 : 0;
   }
   return out;
+}
+
+/** The bot before 27/10/2026 (%K and %D, size rule). */
+function referenceSignals(candles: readonly Candle[], s: SignalSettings): Int8Array {
+  const config = referenceConfig(s);
+  return signalsOf(candles, s.windowSize, (w) => calculateSignalWithCandle(w, config));
+}
+
+/** The bot since 27/10/2026 (%K only, no size rule). */
+function currentReferenceSignals(candles: readonly Candle[], s: SignalSettings): Int8Array {
+  const settings = currentReferenceSettings(s);
+  return signalsOf(candles, s.windowSize, (w) => calculateCurrentSignal(w, settings as never));
 }
 
 function count(signals: Int8Array): { put: number; call: number } {
@@ -72,7 +114,7 @@ describe("SignalEngine matches iq-robot on real candles", () => {
   test("bot defaults: same signal on every candle", () => {
     let total = 0;
     for (const { label, candles } of series) {
-      const expected = referenceSignals(candles, withDefaults());
+      const expected = currentReferenceSignals(candles, withDefaults());
       const actual = new SignalEngine(candles, SIZE).signals();
       expect({ label, diff: differences(actual, expected) }).toEqual({ label, diff: [] });
       const { put, call } = count(expected);
@@ -85,13 +127,47 @@ describe("SignalEngine matches iq-robot on real candles", () => {
   const variants: [string, Partial<SignalSettings>][] = [
     ["wider Bollinger", { bollingerPeriod: 20, bollingerStdDev: 2.2 }],
     ["longer Donchian, shorter box", { donchianPeriod: 30, supportResistancePeriod: 15, zonePositionThreshold: 0.85 }],
+    ["fast stochastic, looser level", { stochasticKPeriod: 9, stochasticDPeriod: 2, stochasticSmoothing: 1, stochasticKOverbought: 75, stochasticKOversold: 25 }],
+    ["looser candle", { minBodyRatio: 0.6, maxRejectionWickRatio: 0.3, consecutiveCandles: 2 }],
+    ["rules off", { useDonchian: false, useStochastic: false }],
+    ["shorter window", { windowSize: 60 }],
+  ];
+  for (const [name, change] of variants) {
+    test(`${name}: same signal on every candle`, () => {
+      const settings = withDefaults(change);
+      for (const { label, candles } of series.slice(0, 3)) {
+        const expected = currentReferenceSignals(candles, settings);
+        const actual = new SignalEngine(candles, SIZE).signals(settings);
+        expect({ label, diff: differences(actual, expected) }).toEqual({ label, diff: [] });
+      }
+    });
+  }
+});
+
+describe("SignalEngine matches iq-robot before 27/10/2026 (%D, size rule)", () => {
+  test("that bot's settings: same signal on every candle", () => {
+    let total = 0;
+    for (const { label, candles } of series) {
+      const settings = withDefaults(BEFORE_27_10);
+      const expected = referenceSignals(candles, settings);
+      const actual = new SignalEngine(candles, SIZE).signals(settings);
+      expect({ label, diff: differences(actual, expected) }).toEqual({ label, diff: [] });
+      const { put, call } = count(expected);
+      total += put + call;
+    }
+    expect(total).toBeGreaterThan(50);
+  });
+
+  const variants: [string, Partial<SignalSettings>][] = [
+    ["wider Bollinger", { bollingerPeriod: 20, bollingerStdDev: 2.2 }],
+    ["longer Donchian, shorter box", { donchianPeriod: 30, supportResistancePeriod: 15, zonePositionThreshold: 0.85 }],
     ["fast stochastic, looser levels", { stochasticKPeriod: 9, stochasticDPeriod: 2, stochasticSmoothing: 1, stochasticKOverbought: 80, stochasticKOversold: 20, stochasticDOverbought: 75, stochasticDOversold: 25 }],
     ["size rule", { candlesToCheckSize: 2, sizeLookback: 25, minCandleSizeRatio: 1 }],
     ["shorter window", { windowSize: 60 }],
   ];
   for (const [name, change] of variants) {
     test(`${name}: same signal on every candle`, () => {
-      const settings = withDefaults(change);
+      const settings = withDefaults({ ...BEFORE_27_10, ...change });
       for (const { label, candles } of series.slice(0, 3)) {
         const expected = referenceSignals(candles, settings);
         const actual = new SignalEngine(candles, SIZE).signals(settings);
@@ -106,7 +182,7 @@ describe("knobs iq-robot hard-codes", () => {
   // value can only remove signals, never add one
   const stricter: [string, Partial<SignalSettings>][] = [
     ["more same-colour candles", { consecutiveCandles: 4 }],
-    ["bigger body", { minBodyRatio: 0.7 }],
+    ["bigger body", { minBodyRatio: 0.9 }],
     ["smaller wick", { maxRejectionWickRatio: 0.15 }],
     ["more candles checked for body and wick", { candlesToCheckBodyAndWicks: 2 }],
   ];
@@ -133,7 +209,7 @@ describe("knobs iq-robot hard-codes", () => {
 
 describe("switching rules on and off", () => {
   test("a rule switched off only adds signals", () => {
-    const off: Partial<SignalSettings>[] = [{ useSupportResistance: false }, { useDonchian: false }, { useBollinger: false }, { useStochastic: false }];
+    const off: Partial<SignalSettings>[] = [{ useSupportResistance: false }, { useDonchian: false }, { useBollinger: false }, { useStochastic: false }, { stochasticUseD: false }, { useCandleSize: false }];
     for (const { candles } of series) {
       const engine = new SignalEngine(candles, SIZE);
       const a = engine.signals();
