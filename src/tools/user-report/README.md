@@ -22,7 +22,7 @@ a@x.com   Somchai Jaidee   IQ 100000001   081-000-0000
   Blocked         2 attempts without a valid subscription, last 18/10/2026
 ```
 
-The CSV in `<DATA_DIR>/reports/` has one row per email with the same data in columns
+The CSV in `<REPORTS_DIR>` (default `data/reports`) has one row per email with the same data in columns
 (`real_orders`, `real_pnl`, `demo_balance`, ...), plus closed, win rate (percent) and P/L per
 source for each account (`real_system_pnl`, `real_outside_closed`, `demo_manual_win_rate`, ...).
 

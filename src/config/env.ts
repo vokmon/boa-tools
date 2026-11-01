@@ -32,9 +32,14 @@ export function loadIqOptionEnv(source: Record<string, string | undefined> = pro
   return parseEnv(IqOptionEnvSchema, source);
 }
 
-/** Folder for files tools write (candles cache, reports). `DATA_DIR` in .env, default `data`. */
+/** Folder for the local candle copy (candles.sqlite). `DATA_DIR` in .env, default `data`. */
 export function dataDir(source: Record<string, string | undefined> = process.env): string {
   return source.DATA_DIR?.trim() || "data";
+}
+
+/** Folder for report CSVs. `REPORTS_DIR` in .env, default `data/reports`; kept apart from DATA_DIR on purpose. */
+export function reportsDir(source: Record<string, string | undefined> = process.env): string {
+  return source.REPORTS_DIR?.trim() || "data/reports";
 }
 
 /** Turso database that holds the candles. */

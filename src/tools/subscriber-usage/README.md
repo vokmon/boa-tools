@@ -41,7 +41,7 @@ matched by order id to the "Order placed" logs, which are searched from an hour 
 period so a position opened just before it still finds its order. This reads every
 closed-position and placed-order log in the period (together about 2,000 a day, roughly 20
 seconds per day), and only covers trades that closed while the app was open.
-The CSV in `<DATA_DIR>/reports/` has the same rows and order:
+The CSV in `<REPORTS_DIR>` (default `data/reports`) has the same rows and order:
 `status, first_name, last_name, iq_option_id, email, phone, days_used, days_subscribed, used_days, plan, subscription_end`.
 
 How it works:

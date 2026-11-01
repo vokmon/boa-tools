@@ -20,7 +20,7 @@ TO FOLLOW UP (15)  latest attempt first
   ...
 ```
 
-The CSV in `<DATA_DIR>/reports/` has the same rows and order:
+The CSV in `<REPORTS_DIR>` (default `data/reports`) has the same rows and order:
 `first_name, last_name, email, phone, iq_option_id, attempts, attempt_days, last_attempt, last_plan, plan_type, plan_status, plan_end`.
 
 With `--pnl` (or answering yes), each person also gets the profit/loss of their closed trades in

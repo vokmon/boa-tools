@@ -4,7 +4,7 @@ import { CandlesService } from "@/clients/iqoption/CandlesService";
 import type { RawCandle } from "@/clients/iqoption/types";
 import { CandleDb } from "@/storage/CandleDb";
 import { CandleCollector, dayStatus, firstFullDay } from "@/tools/shared/candles/CandleCollector";
-import { backtestResultsDir, backtestSettingsDir, dataDir } from "@/config/env";
+import { backtestResultsDir, backtestSettingsDir, dataDir, reportsDir } from "@/config/env";
 
 const NOW = new Date("2026-10-21T08:00:00Z");
 const dayStart = (day: string) => Date.parse(`${day}T00:00:00Z`) / 1000;
@@ -159,5 +159,11 @@ describe("dataDir", () => {
     expect(backtestResultsDir({})).toBe("data/backtest");
     expect(backtestResultsDir({ DATA_DIR: "/Volumes/ext/boa" })).toBe("/Volumes/ext/boa/backtest");
     expect(backtestResultsDir({ DATA_DIR: "/x", BACKTEST_RESULTS_DIR: "~/Desktop/backtests" })).toBe("~/Desktop/backtests");
+  });
+
+  test("reports go to data/reports whatever DATA_DIR is, and follow REPORTS_DIR", () => {
+    expect(reportsDir({})).toBe("data/reports");
+    expect(reportsDir({ DATA_DIR: "./data/backtest/sqlite/" })).toBe("data/reports");
+    expect(reportsDir({ REPORTS_DIR: "~/Desktop/reports" })).toBe("~/Desktop/reports");
   });
 });

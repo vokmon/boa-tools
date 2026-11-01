@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { join } from "node:path";
-import { dataDir, loadEnv } from "@/config/env";
+import { loadEnv, reportsDir } from "@/config/env";
 import { DEFAULT_TIMEZONE } from "@/config/constants";
 import { createWixClient } from "@/clients/wix/createWixClient";
 import { PricingPlanOrdersService } from "@/clients/wix/PricingPlanOrdersService";
@@ -40,7 +40,7 @@ has subscribed since is left out.`,
       description: "sum profit/loss of each person's closed trades in the period, real and demo separately (asked if omitted)",
     },
     tz: { type: "string", placeholder: "zone", description: "timezone for the days", default: DEFAULT_TIMEZONE },
-    out: { type: "string", placeholder: "path", description: "CSV path (default <DATA_DIR>/reports/follow-up-logins_<from>_<to>.csv)" },
+    out: { type: "string", placeholder: "path", description: "CSV path (default <REPORTS_DIR>/follow-up-logins_<from>_<to>.csv)" },
   },
   notes: `
 Sentry keeps logs for about 30 days. Attempts come from the "Subscription validation failed"
@@ -82,7 +82,7 @@ log, written when someone signs in with IQ Option and their Wix account has no a
     });
     const result = await report.build({ period, includePnl, sentryProjectIds: projects.map((p) => String(p.id)) });
 
-    const out = values.out ?? join(dataDir(), "reports", `follow-up-logins_${period.days[0]!.key}_${period.days.at(-1)!.key}.csv`);
+    const out = values.out ?? join(reportsDir(), `follow-up-logins_${period.days[0]!.key}_${period.days.at(-1)!.key}.csv`);
     await writeCsv(out, result.rows, csvColumns(timeZone, result.rows));
 
     console.log(`\n${formatFollowUpReport(result, period, includePnl)}`);

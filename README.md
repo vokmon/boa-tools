@@ -19,8 +19,9 @@ bun test
 | `bun run collect-candles` | 1-minute candles of every IQ Option asset into Turso (also runs daily on Supabase) | [README](src/tools/collect-candles/README.md) |
 | `bun run backtest` | replays the bot on the collected candles with settings files; report, AI brief | [README](src/tools/backtest/README.md) |
 
-Every command has `--help`, which also lists the `.env` keys it needs. Files tools write go under
-`DATA_DIR` (default `data/`, ignored by git).
+Every command has `--help`, which also lists the `.env` keys it needs. Report CSVs go to
+`REPORTS_DIR` (default `data/reports/`), the local candle copy to `DATA_DIR` (default `data/`); both
+are ignored by git.
 
 ## Tools and services
 

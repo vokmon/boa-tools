@@ -20,7 +20,7 @@ Wix members (Asia/Bangkok)
   ...
 ```
 
-The CSV in `<DATA_DIR>/reports/` (`member-report_<today>.csv`, or `member-report_<from>_<to>.csv`
+The CSV in `<REPORTS_DIR>` (default `data/reports`) (`member-report_<today>.csv`, or `member-report_<from>_<to>.csv`
 with P/L, `member-report_all_<to>.csv` for all trades) has the same rows and order:
 `first_name, last_name, email, phone, last_login, last_training_completed, training_completed_at,
 trainings_completed, last_plan, plan_type, plan_status, plan_end, subscription_active, iq_option_id`.

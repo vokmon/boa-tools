@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { join } from "node:path";
-import { dataDir, loadEnv } from "@/config/env";
+import { loadEnv, reportsDir } from "@/config/env";
 import { DEFAULT_TIMEZONE } from "@/config/constants";
 import { createWixClient } from "@/clients/wix/createWixClient";
 import { ContactsService } from "@/clients/wix/ContactsService";
@@ -43,7 +43,7 @@ plan (active or not). With --pnl, also the profit/loss of their closed trades in
     to: { type: "string", placeholder: "dd/mm/yyyy", description: "last day for trades, inclusive, with --pnl (default today; asked if omitted)" },
     project: { type: "string", placeholder: "slugs|all", description: "Sentry projects, comma separated, with --pnl (asked if omitted)" },
     tz: { type: "string", placeholder: "zone", description: "timezone for dates", default: DEFAULT_TIMEZONE },
-    out: { type: "string", placeholder: "path", description: "CSV path (default <DATA_DIR>/reports/member-report_<date>.csv)" },
+    out: { type: "string", placeholder: "path", description: "CSV path (default <REPORTS_DIR>/member-report_<date>.csv)" },
   },
   notes: `
 Site collaborators (admins) cannot be told apart through the Wix API, so they are listed too.
@@ -82,7 +82,7 @@ training columns are left blank. Sentry keeps logs for about 30 days.`,
     const result = await report.build({ pnl });
 
     const suffix = pnl ? `${pnl.all ? "all" : pnl.period.days[0]!.key}_${pnl.period.days.at(-1)!.key}` : buildPeriod(today, today, timeZone).days[0]!.key;
-    const out = values.out ?? join(dataDir(), "reports", `member-report_${suffix}.csv`);
+    const out = values.out ?? join(reportsDir(), `member-report_${suffix}.csv`);
     await writeCsv(out, result.rows, csvColumns(timeZone, result.rows));
 
     console.log(`\n${formatMemberReport(result, timeZone, pnl ?? null)}`);
