@@ -7,6 +7,7 @@
     "user-report": "bun src/tools/user-report/index.ts",
     "follow-up-logins": "bun src/tools/follow-up-logins/index.ts",
     "member-report": "bun src/tools/member-report/index.ts",
+    "daily-results": "bun src/tools/daily-results/index.ts",
     "collect-candles": "bun src/tools/collect-candles/index.ts",
     "backtest": "bun src/tools/backtest/index.ts",
     "typecheck": "tsc --noEmit",

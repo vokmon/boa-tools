@@ -39,6 +39,24 @@ export class ContactsService {
     return result;
   }
 
+  /** Contacts per value of a custom field (e.g. the IQ Option id). A value can match several contacts or none. */
+  async getContactsByCustomField(key: string, values: Iterable<string>): Promise<Map<string, WixContact[]>> {
+    const result = new Map<string, WixContact[]>();
+    for (const batch of chunk(uniq(values), MAX_IDS_PER_QUERY)) {
+      const page = await retry(
+        // The SDK's field names do not include custom fields, but Wix filters on them
+        () => this.wix.contacts.queryContacts().in(`info.extendedFields.${key}` as "_id", batch).limit(MAX_IDS_PER_QUERY).find(),
+        { label: "Wix query contacts by field" },
+      );
+      for (const contact of page.items) {
+        const value = ContactsService.getCustomField(contact, key);
+        if (value === undefined) continue;
+        result.set(value, [...(result.get(value) ?? []), contact]);
+      }
+    }
+    return result;
+  }
+
   static getCustomField(contact: WixContact, key: string): string | undefined {
     const value = contact.info?.extendedFields?.items?.[key];
     if (value === undefined || value === null) return undefined;
