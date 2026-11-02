@@ -1,5 +1,5 @@
-import { formatAmount } from "@/domain/trading";
-import type { Period } from "@/lib/date";
+import { formatAmount, type PnlRange } from "@/domain/trading";
+import { formatDateTime, type Period } from "@/lib/date";
 import { renderTable, type TableColumn } from "@/lib/output/table";
 import { pnlTableColumns } from "@/tools/shared/pnlOutput";
 import type { DailyResultRow, DayResult } from "./types";
@@ -24,8 +24,15 @@ export function formatDailyResults(rows: readonly DailyResultRow[], period: Peri
     { value: (r) => r.phone || "-" },
     { value: (r) => r.result },
     ...pnlTableColumns((r: DailyResultRow) => r.pnl),
+    { value: (r) => (r.realRange ? rangeText(r.realRange, period.timeZone) : "") },
   ];
   return [...lines, ...renderTable(rows, columns)].join("\n");
+}
+
+/** "high +599.86 at 14:58, low -161.39 at 15:26": the real running total's high and low of the day. */
+function rangeText(r: PnlRange, timeZone: string): string {
+  const time = (d: Date | null) => (d ? ` at ${formatDateTime(d, timeZone).slice(-5)}` : "");
+  return `high ${formatAmount(r.high)}${time(r.highAt)}, low ${formatAmount(r.low)}${time(r.lowAt)}`;
 }
 
 /** "-1,250.00 THB, +12.00 USD": the real net per currency. */

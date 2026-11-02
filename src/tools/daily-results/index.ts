@@ -58,7 +58,7 @@ order even with several browsers open. WIN / LOSS is decided by the real account
     const rows = await report.build({ period, sentryProjectIds: projects.map((p) => String(p.id)) });
 
     const out = values.out ?? join(reportsDir(), `daily-results_${period.days[0]!.key}.csv`);
-    await writeCsv(out, rows, csvColumns(rows));
+    await writeCsv(out, rows, csvColumns(timeZone, rows));
 
     console.log(`\n${formatDailyResults(rows, period)}`);
     logger.info(`CSV written to ${out}`);

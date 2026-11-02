@@ -1,4 +1,4 @@
-import type { PnlTotal } from "@/domain/trading";
+import type { PnlRange, PnlTotal } from "@/domain/trading";
 
 /** WIN / LOSS / EVEN by the real account; DEMO ONLY when the person only traded on demo. */
 export type DayResult = "WIN" | "LOSS" | "EVEN" | "DEMO ONLY";
@@ -14,5 +14,7 @@ export interface DailyResultRow {
   phone: string;
   /** Closed trades of the day per account type and currency, split by source. */
   pnl: PnlTotal[];
+  /** High and low of the real account's running total during the day; null without real trades. */
+  realRange: PnlRange | null;
   result: DayResult;
 }

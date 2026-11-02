@@ -1,7 +1,7 @@
 import type { ContactsService } from "@/clients/wix/ContactsService";
 import type { LogSearchService } from "@/clients/sentry/LogSearchService";
 import { WIX_IQ_OPTION_FIELD_KEY } from "@/config/constants";
-import { sumByUser, type PnlTotal } from "@/domain/trading";
+import { rangeByUser, sumByUser, type PnlTotal } from "@/domain/trading";
 import type { Period } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import { readClosedPositions, readPlacedOrders } from "@/tools/shared/tradeLogs";
@@ -26,6 +26,7 @@ export class DailyResults {
     const scope = { window: options.period.window, projectIds: options.sentryProjectIds };
     const [positions, orders] = await Promise.all([readClosedPositions(this.deps.logs, scope), readPlacedOrders(this.deps.logs, scope)]);
     const pnlById = sumByUser(positions, orders);
+    const rangeById = rangeByUser(positions);
     logger.info(`Sentry: ${positions.length} closed positions by ${pnlById.size} people`);
     if (pnlById.size === 0) return [];
 
@@ -44,6 +45,8 @@ export class DailyResults {
         email: main?.primaryInfo?.email ?? "",
         phone: main?.primaryInfo?.phone ?? "",
         pnl,
+        // In the currency of the real total that decides the result
+        realRange: rangeById.get(iqOptionId)?.find((r) => r.account === "real" && r.currency === pnl.find((t) => t.account === "real")?.currency) ?? null,
         result: resultOf(pnl),
       };
     });

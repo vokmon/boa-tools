@@ -125,12 +125,8 @@ export function parseClosedPosition(row: LogRow): ClosedPosition | null {
 export function sumByUser(positions: Iterable<ClosedPosition>, orders: Iterable<PlacedOrder>): Map<string, PnlTotal[]> {
   type Acc = { account: string; currency: string; total: Tally; bySource: Record<TradeSource, Tally> };
   const ordersById = indexOrders(orders);
-  const seen = new Set<string>();
   const totals = new Map<string, Map<string, Acc>>();
-  for (const p of positions) {
-    const dedupeKey = `${p.iqOptionId}|${p.orderKey}`;
-    if (seen.has(dedupeKey)) continue;
-    seen.add(dedupeKey);
+  for (const p of uniquePositions(positions)) {
     const perUser = totals.get(p.iqOptionId) ?? new Map<string, Acc>();
     totals.set(p.iqOptionId, perUser);
     const key = `${p.account}|${p.currency}`;
@@ -144,6 +140,57 @@ export function sumByUser(positions: Iterable<ClosedPosition>, orders: Iterable<
       id,
       [...perUser.values()]
         .map((a): PnlTotal => ({ account: a.account, currency: a.currency, ...toResult(a.total), bySource: toResults(a.bySource) }))
+        .sort((a, b) => accountRank(a.account) - accountRank(b.account) || a.currency.localeCompare(b.currency)),
+    ]),
+  );
+}
+
+/** Positions with a person's same order ids logged more than once (several browsers open) kept once, the first one seen. */
+export function* uniquePositions(positions: Iterable<ClosedPosition>): Generator<ClosedPosition> {
+  const seen = new Set<string>();
+  for (const p of positions) {
+    const key = `${p.iqOptionId}|${p.orderKey}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    yield p;
+  }
+}
+
+/** The highest and lowest the running total reached, for one person, account type and currency. */
+export interface PnlRange {
+  account: string;
+  currency: string;
+  /** Highest running total, 0 when it never went above 0; `highAt` is when it got there (null for 0). */
+  high: number;
+  highAt: Date | null;
+  /** Lowest running total, 0 when it never went below 0. */
+  low: number;
+  lowAt: Date | null;
+}
+
+/**
+ * Adds up each person's positions in the order they closed and keeps the high and the low of that
+ * running total, per account type and currency. Each order counts once, as in sumByUser.
+ */
+export function rangeByUser(positions: Iterable<ClosedPosition>): Map<string, PnlRange[]> {
+  type Acc = { account: string; currency: string; cents: number; high: number; highAt: Date | null; low: number; lowAt: Date | null };
+  const byTime = [...positions].sort((a, b) => a.closedAt.getTime() - b.closedAt.getTime());
+  const ranges = new Map<string, Map<string, Acc>>();
+  for (const p of uniquePositions(byTime)) {
+    const perUser = ranges.get(p.iqOptionId) ?? new Map<string, Acc>();
+    ranges.set(p.iqOptionId, perUser);
+    const key = `${p.account}|${p.currency}`;
+    const acc = perUser.get(key) ?? { account: p.account, currency: p.currency, cents: 0, high: 0, highAt: null, low: 0, lowAt: null };
+    perUser.set(key, acc);
+    acc.cents += p.pnlCents;
+    if (acc.cents > acc.high) [acc.high, acc.highAt] = [acc.cents, p.closedAt];
+    if (acc.cents < acc.low) [acc.low, acc.lowAt] = [acc.cents, p.closedAt];
+  }
+  return new Map(
+    [...ranges].map(([id, perUser]) => [
+      id,
+      [...perUser.values()]
+        .map(({ cents: _, high, low, ...a }): PnlRange => ({ ...a, high: high / 100, low: low / 100 }))
         .sort((a, b) => accountRank(a.account) - accountRank(b.account) || a.currency.localeCompare(b.currency)),
     ]),
   );
